@@ -1,5 +1,10 @@
 node_modules
+.secret
+.infura
+.solhint.json
 .env
+.idea
+gutdem.iml
 coverage
 coverage.json
 typechain
