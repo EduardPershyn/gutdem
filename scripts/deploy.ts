@@ -7,11 +7,12 @@ export async function main(
   isRoot: boolean,
   tests: boolean,
 ): Promise<[DeployedContracts]> {
+  let LOG = !tests ? console.log.bind(console) : function () {};
   let totalGasUsed = 0n;
   let accounts = await ethers.getSigners();
   let account = await accounts[0].getAddress();
 
-  if (!tests) console.log(`> Using account as owner: ${account}`);
+  LOG(`> Using account as owner: ${account}`);
 
   if (tests == true) {
     cfg = testCfg;
@@ -20,7 +21,7 @@ export async function main(
   const dbnAddress = await demBaconDeploy();
   const [growerAddress, toddlerAddress] = await deployOnChildChain();
 
-  if (!tests) console.log(`> Total gas used: ${strDisplay(totalGasUsed)}`);
+  LOG(`> Total gas used: ${strDisplay(totalGasUsed)}`);
 
   let result = new DeployedContracts({
     demBacon: dbnAddress,
@@ -76,14 +77,9 @@ export async function main(
         growerAddress,
         accounts[0],
       );
-      let receipt = await (await demNftSale.setRewardManager(account)).wait();
-      if (!tests)
-        console.log(
-          `>> growerNft setRewardManager gas used: ${strDisplay(
-            receipt.gasUsed,
-          )}`,
-        );
-      totalGasUsed += receipt.gasUsed;
+      const tx = await (await demNftSale.setRewardManager(account)).wait();
+      LOG(`>> grower setRewardManager gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
     }
     {
       let demNftSale = await ethers.getContractAt(
@@ -91,14 +87,9 @@ export async function main(
         toddlerAddress,
         accounts[0],
       );
-      let receipt = await (await demNftSale.setRewardManager(account)).wait();
-      if (!tests)
-        console.log(
-          `>> toddlerNft setRewardManager gas used: ${strDisplay(
-            receipt.gasUsed,
-          )}`,
-        );
-      totalGasUsed += receipt.gasUsed;
+      const tx = await (await demNftSale.setRewardManager(account)).wait();
+      LOG(`>> toddler setRewardManager gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
     }
 
     return [growerAddress, toddlerAddress];
@@ -111,25 +102,19 @@ export async function main(
     await deployedDbn.waitForDeployment();
     const receipt = await deployedDbn.deploymentTransaction().wait();
 
-    if (!tests) console.log(`>> demBacon address: ${receipt.contractAddress}`);
-    if (!tests)
-      console.log(
-        `>> demBacon deploy gas used: ${strDisplay(receipt.gasUsed)}`,
-      );
+    LOG(`>> demBacon address: ${receipt.contractAddress}`);
+    LOG(`>> demBacon deploy gas used: ${strDisplay(receipt.gasUsed)}`);
     totalGasUsed += receipt.gasUsed;
 
-    let tx = await (await deployedDbn.setRewardManager(account)).wait();
-    if (!tests)
-      console.log(
-        `>> demBacon setRewardManager gas used: ${strDisplay(tx.gasUsed)}`,
-      );
-    totalGasUsed += receipt.gasUsed;
+    const tx = await (await deployedDbn.setRewardManager(account)).wait();
+    LOG(`>> demBacon setRewardManager gas used: ${strDisplay(tx.gasUsed)}`);
+    totalGasUsed += tx.gasUsed;
 
     return receipt.contractAddress;
   }
 
   async function deployFacets(...facets: any): Promise<FacetArgs[]> {
-    if (!tests) console.log("");
+    LOG("");
 
     const instances: FacetArgs[] = [];
     for (let facet of facets) {
@@ -149,16 +134,14 @@ export async function main(
         new FacetArgs(facet, receipt.contractAddress, facetInstance),
       );
 
-      if (!tests)
-        console.log(`>>> Facet ${facet} deployed: ${receipt.contractAddress}`);
-      if (!tests)
-        console.log(`${facet} deploy gas used: ${strDisplay(receipt.gasUsed)}`);
-      if (!tests) console.log(`Tx hash: ${tx.hash}`);
+      LOG(`>>> Facet ${facet} deployed: ${receipt.contractAddress}`);
+      LOG(`${facet} deploy gas used: ${strDisplay(receipt.gasUsed)}`);
+      LOG(`Tx hash: ${tx.hash}`);
 
       totalGasUsed += receipt.gasUsed;
     }
 
-    if (!tests) console.log("");
+    LOG("");
 
     return instances;
   }
@@ -212,14 +195,8 @@ export async function main(
     ).wait();
     gasCost += cutTx.gasUsed;
 
-    if (!tests)
-      console.log(
-        `>> ${diamondName} diamond address: ${receipt.contractAddress}`,
-      );
-    if (!tests)
-      console.log(
-        `>> ${diamondName} diamond deploy gas used: ${strDisplay(gasCost)}`,
-      );
+    LOG(`>> ${diamondName} diamond address: ${receipt.contractAddress}`);
+    LOG(`>> ${diamondName} diamond deploy gas used: ${strDisplay(gasCost)}`);
     totalGasUsed += gasCost;
 
     return receipt.contractAddress;
