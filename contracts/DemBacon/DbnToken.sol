@@ -2,9 +2,9 @@
 pragma solidity 0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC1363, ERC20} from "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 
-contract DbnToken is ERC20, Ownable {
+contract DbnToken is ERC1363, Ownable {
     struct Args {
         address rewardManager;
         string name;
