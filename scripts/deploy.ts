@@ -70,6 +70,37 @@ export async function main(
       ],
     );
 
+    {
+      let demNftSale = await ethers.getContractAt(
+        "SaleFacet",
+        growerAddress,
+        accounts[0],
+      );
+      let receipt = await (await demNftSale.setRewardManager(account)).wait();
+      if (!tests)
+        console.log(
+          `>> growerNft setRewardManager gas used: ${strDisplay(
+            receipt.gasUsed,
+          )}`,
+        );
+      totalGasUsed += receipt.gasUsed;
+    }
+    {
+      let demNftSale = await ethers.getContractAt(
+        "SaleFacet",
+        toddlerAddress,
+        accounts[0],
+      );
+      let receipt = await (await demNftSale.setRewardManager(account)).wait();
+      if (!tests)
+        console.log(
+          `>> toddlerNft setRewardManager gas used: ${strDisplay(
+            receipt.gasUsed,
+          )}`,
+        );
+      totalGasUsed += receipt.gasUsed;
+    }
+
     return [growerAddress, toddlerAddress];
   }
 
@@ -84,6 +115,13 @@ export async function main(
     if (!tests)
       console.log(
         `>> demBacon deploy gas used: ${strDisplay(receipt.gasUsed)}`,
+      );
+    totalGasUsed += receipt.gasUsed;
+
+    let tx = await (await deployedDbn.setRewardManager(account)).wait();
+    if (!tests)
+      console.log(
+        `>> demBacon setRewardManager gas used: ${strDisplay(tx.gasUsed)}`,
       );
     totalGasUsed += receipt.gasUsed;
 
