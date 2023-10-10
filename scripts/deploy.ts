@@ -1,25 +1,44 @@
 import { ethers } from "hardhat";
 import { strDisplay } from "./shared/utils";
 import { deployConfig as cfg } from "../deploy.config";
+import { deployConfig as testCfg } from "../deploy-test.config";
 
-async function main() {
+export async function main(
+  isRoot: boolean,
+  tests: boolean,
+): Promise<[DeployedContracts]> {
   let totalGasUsed = 0n;
   let accounts = await ethers.getSigners();
   let account = await accounts[0].getAddress();
 
-  console.log(`> Using account as owner: ${account}`);
+  if (!tests) console.log(`> Using account as owner: ${account}`);
+
+  if (tests == true) {
+    cfg = testCfg;
+  }
 
   const dbnAddress = await demBaconDeploy();
   const [growerAddress, toddlerAddress] = await deployOnChildChain();
 
-  console.log(`> Total gas used: ${strDisplay(totalGasUsed)}`);
+  if (!tests) console.log(`> Total gas used: ${strDisplay(totalGasUsed)}`);
+
+  let result = new DeployedContracts({
+    demBacon: dbnAddress,
+    demRebel: "",
+    game: "",
+    growerDemNft: growerAddress,
+    toddlerDemNft: toddlerAddress,
+    safe: "",
+    link: "",
+  });
+  return result;
 
   async function deployOnChildChain(): Promise<[string, string]> {
     let [growerNftArgs, growerSaleArgs, toddlerNftArgs, toddlerSaleArgs] =
       await deployFacets("DemNft", "SaleFacet", "DemNft", "SaleFacet");
 
     const growerAddress = await deployDiamond(
-      "Grower",
+      "Grower DemNft",
       "contracts/DemNft/InitDiamond.sol:InitDiamond",
       [growerNftArgs, growerSaleArgs],
       [
@@ -35,7 +54,7 @@ async function main() {
       ],
     );
     const toddlerAddress = await deployDiamond(
-      "Toddler",
+      "Toddler DemNft",
       "contracts/DemNft/InitDiamond.sol:InitDiamond",
       [toddlerNftArgs, toddlerSaleArgs],
       [
@@ -61,15 +80,18 @@ async function main() {
     await deployedDbn.waitForDeployment();
     const receipt = await deployedDbn.deploymentTransaction().wait();
 
-    console.log(`>> demBacon address: ${receipt.contractAddress}`);
-    console.log(`>> demBacon deploy gas used: ${strDisplay(receipt.gasUsed)}`);
+    if (!tests) console.log(`>> demBacon address: ${receipt.contractAddress}`);
+    if (!tests)
+      console.log(
+        `>> demBacon deploy gas used: ${strDisplay(receipt.gasUsed)}`,
+      );
     totalGasUsed += receipt.gasUsed;
 
     return receipt.contractAddress;
   }
 
   async function deployFacets(...facets: any): Promise<FacetArgs[]> {
-    console.log("");
+    if (!tests) console.log("");
 
     const instances: FacetArgs[] = [];
     for (let facet of facets) {
@@ -89,14 +111,16 @@ async function main() {
         new FacetArgs(facet, receipt.contractAddress, facetInstance),
       );
 
-      console.log(`>>> Facet ${facet} deployed: ${receipt.contractAddress}`);
-      console.log(`${facet} deploy gas used: ${strDisplay(receipt.gasUsed)}`);
-      console.log(`Tx hash: ${tx.hash}`);
+      if (!tests)
+        console.log(`>>> Facet ${facet} deployed: ${receipt.contractAddress}`);
+      if (!tests)
+        console.log(`${facet} deploy gas used: ${strDisplay(receipt.gasUsed)}`);
+      if (!tests) console.log(`Tx hash: ${tx.hash}`);
 
       totalGasUsed += receipt.gasUsed;
     }
 
-    console.log("");
+    if (!tests) console.log("");
 
     return instances;
   }
@@ -150,12 +174,14 @@ async function main() {
     ).wait();
     gasCost += cutTx.gasUsed;
 
-    console.log(
-      `>> ${diamondName} diamond address: ${receipt.contractAddress}`,
-    );
-    console.log(
-      `>> ${diamondName} diamond deploy gas used: ${strDisplay(gasCost)}`,
-    );
+    if (!tests)
+      console.log(
+        `>> ${diamondName} diamond address: ${receipt.contractAddress}`,
+      );
+    if (!tests)
+      console.log(
+        `>> ${diamondName} diamond deploy gas used: ${strDisplay(gasCost)}`,
+      );
     totalGasUsed += gasCost;
 
     return receipt.contractAddress;
@@ -190,9 +216,25 @@ class FacetArgs {
   }
 }
 
+export class DeployedContracts {
+  public demBacon: string = "";
+  public demRebel: string = "";
+  public game: string = "";
+  public growerDemNft: string = "";
+  public toddlerDemNft: string = "";
+  public safe: string = "";
+  public link: string = "";
+
+  public constructor(init?: Partial<DeployedContracts>) {
+    Object.assign(this, init);
+  }
+}
+
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main(cfg.isRootChain, false).catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
