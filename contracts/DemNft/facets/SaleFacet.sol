@@ -10,12 +10,10 @@ import {LibDemNft} from "../libraries/LibDemNft.sol";
 contract SaleFacet is Modifiers, IERC1363Receiver {
     function setRewardManager(address rewardManager_) external onlyOwner {
         s.rewardManager = rewardManager_;
-        IERC20(s.dbnContract).approve(rewardManager_, type(uint256).max);
     }
 
     function withdrawDbn() external onlyRewardManager {
-        IERC20(s.dbnContract).transferFrom(
-            address(this),
+        IERC20(s.dbnContract).transfer(
             msg.sender,
             IERC20(s.dbnContract).balanceOf(address(this))
         );
@@ -33,7 +31,7 @@ contract SaleFacet is Modifiers, IERC1363Receiver {
         );
         require(s.isSaleEnabled == true, "SaleFacet: Purchase is disabled");
 
-        uint256 nftAmount = s.dbnPrice / amount;
+        uint256 nftAmount = amount / s.dbnPrice;
         require(nftAmount > 0, "SaleFacet: Too low amount");
         _mint(nftAmount, operator);
 
