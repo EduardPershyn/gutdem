@@ -199,11 +199,14 @@ describe("DemNft Test", async () => {
       expect(await demNft.tokenOfOwnerByIndex(userAddress2, 4)).to.be.equal(5);
     }
     {
-      await demNft.connect(user2).transferFrom(userAddress2, userAddress1, 1);
-      await demNft.connect(user2).transferFrom(userAddress2, userAddress1, 2);
-      await demNft.connect(user2).transferFrom(userAddress2, userAddress1, 3);
-      await demNft.connect(user2).transferFrom(userAddress2, userAddress1, 4);
-      await demNft.connect(user2).transferFrom(userAddress2, userAddress1, 5);
+      await demNft
+        .connect(user2)
+        .safeBatchTransferFrom(
+          userAddress2,
+          userAddress1,
+          [1, 2, 3, 4, 5],
+          ethers.encodeBytes32String(""),
+        );
 
       expect((await demNft.tokenIdsOfOwner(userAddress1)).length).to.equal(7);
       expect((await demNft.tokenIdsOfOwner(userAddress2)).length).to.equal(0);
@@ -214,5 +217,31 @@ describe("DemNft Test", async () => {
     }
   });
 
-  //TODO safeTransferFrom and safeBatchTransferFrom
+  it("Check safeTransferFrom", async () => {
+    const user1 = accounts[1];
+    const userAddress1 = await user1.getAddress();
+
+    const testContract = await (
+      await ethers.getContractFactory("ERC721TokenReceiver")
+    ).deploy();
+    await testContract.waitForDeployment();
+    await testContract.deploymentTransaction().wait();
+
+    await demNft
+      .connect(user1)
+      .safeTransferFrom(userAddress1, testContract.target, 0);
+    await demNft
+      .connect(user1)
+      .safeBatchTransferFrom(
+        userAddress1,
+        testContract.target,
+        [1, 2, 3],
+        ethers.encodeBytes32String(""),
+      );
+
+    expect((await demNft.tokenIdsOfOwner(userAddress1)).length).to.equal(3);
+    expect((await demNft.tokenIdsOfOwner(testContract.target)).length).to.equal(
+      4,
+    );
+  });
 });
