@@ -4,6 +4,9 @@ node_modules
 .solhint.json
 .env
 .idea
+.eslintrc.yml
+corpus
+crytic-export
 gutdem.iml
 coverage
 coverage.json

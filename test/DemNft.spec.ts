@@ -1,4 +1,4 @@
-import { assert, expect } from "chai";
+import { expect } from "chai";
 import { Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { helpers } from "./shared/helpers";
@@ -18,7 +18,7 @@ describe("DemNft Test", async () => {
   let demNftAddress: string;
 
   before(async () => {
-    let deployOutput = await utils.main(false, true);
+    const deployOutput = await utils.main(false, true);
     demBaconAddress = deployOutput.demBacon;
     demNftAddress = deployOutput.growerDemNft;
 
@@ -48,7 +48,7 @@ describe("DemNft Test", async () => {
         .revertedWithCustomError;
     }
     {
-      let receipt = await (
+      const receipt = await (
         await demBacon.setRewardManager(ownerAddress)
       ).wait();
       expect(receipt.status).to.equal(1);
@@ -60,7 +60,7 @@ describe("DemNft Test", async () => {
       ).to.be.revertedWith("LibAppStorage: Only owner");
     }
     {
-      let receipt = await (
+      const receipt = await (
         await saleFacet.setRewardManager(ownerAddress)
       ).wait();
       expect(receipt.status).to.equal(1);
@@ -79,7 +79,7 @@ describe("DemNft Test", async () => {
     }
     {
       //tokenUri set
-      let receipt = await (await demNft.setBaseURI(testIpfsPath)).wait();
+      const receipt = await (await demNft.setBaseURI(testIpfsPath)).wait();
       expect(receipt.status).to.equal(1);
     }
     {
@@ -110,7 +110,7 @@ describe("DemNft Test", async () => {
 
     await expect(
       helpers.buyGrowers(owner, user1, 5000, demBacon, demNft),
-    ).to.be.revertedWith("SaleFacet: Exceed max nft supply");
+    ).to.be.revertedWith("LibDemNft: Exceed max nft supply");
   });
 
   it("Check on pay low price", async () => {

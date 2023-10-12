@@ -33,26 +33,8 @@ contract SaleFacet is Modifiers, IERC1363Receiver {
 
         uint256 nftAmount = amount / s.dbnPrice;
         require(nftAmount > 0, "SaleFacet: Too low amount");
-        _mint(nftAmount, operator);
+        LibDemNft.mint(nftAmount, operator);
 
         return IERC1363Receiver.onTransferReceived.selector;
-    }
-
-    function _mint(uint256 amount_, address to_) internal {
-        uint256 tokenId = s.tokenIdsCount;
-        require(
-            tokenId + amount_ <= s.maxNftCount,
-            "SaleFacet: Exceed max nft supply"
-        );
-
-        for (uint256 i = 0; i < amount_; ) {
-            LibDemNft.setOwner(tokenId, to_);
-
-            unchecked {
-                ++tokenId;
-                ++i;
-            }
-        }
-        s.tokenIdsCount = tokenId;
     }
 }

@@ -29,6 +29,25 @@ library LibDemNft {
         setOwner(tokenId_, to_);
     }
 
+    function mint(uint256 amount_, address to_) internal {
+        AppStorage storage s = LibAppStorage.diamondStorage();
+        uint256 tokenId = s.tokenIdsCount;
+        require(
+            tokenId + amount_ <= s.maxNftCount,
+            "LibDemNft: Exceed max nft supply"
+        );
+
+        for (uint256 i = 0; i < amount_; ) {
+            setOwner(tokenId, to_);
+
+            unchecked {
+                ++tokenId;
+                ++i;
+            }
+        }
+        s.tokenIdsCount = tokenId;
+    }
+
     function setOwner(uint256 tokenId_, address newOwner_) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
         address oldOwner = s.owners[tokenId_];
