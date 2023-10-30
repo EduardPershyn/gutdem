@@ -14,7 +14,6 @@ contract DemNftEchidna is DemNft  {
     uint constant maxNft = 10;
 
     constructor() {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         s.name = "DemBacon";
         s.symbol = "DBN";
         s.maxNftCount = maxNft;
@@ -41,11 +40,11 @@ contract DemNftEchidna is DemNft  {
         checkBalances();
     }
 
-    function checkTotalSupply() internal {
+    function checkTotalSupply() internal view {
         assert(this.totalSupply() <= maxNft);
     }
 
-    function checkBalances() internal {
+    function checkBalances() internal view  {
         assert(this.balanceOf(user1) <= maxNft);
         assert(this.balanceOf(user2) <= maxNft);
     }
