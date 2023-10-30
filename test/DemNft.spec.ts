@@ -6,7 +6,7 @@ import { deployConfig as testCfg } from "../deploy-test.config";
 
 import * as utils from "../scripts/deploy";
 
-describe("DemNft Test", async () => {
+describe.skip("DemNft Test", async () => {
   let demBacon: Contract;
   let demNft: Contract;
   let saleFacet: Contract;

@@ -4,6 +4,18 @@ import { Contract, Signer } from "ethers";
 import { deployConfig as testCfg } from "../../deploy-test.config";
 
 let helpers = {
+  purchaseRebels: async (
+    saleFacet: Contract,
+    account: Signer,
+    count: number,
+  ) => {
+    let tx = await saleFacet.connect(account).purchaseDemRebels(count, {
+      value: testCfg.demRebelSalePrice * BigInt(count),
+    });
+    const receipt = await tx.wait();
+    expect(receipt.status).to.be.equal(1, "Should buy DemRebels");
+  },
+
   mintDemBacon: async (
     owner: Signer,
     account: Signer,

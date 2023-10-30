@@ -4,6 +4,15 @@ export let deployConfig = {
     dbnName: "DemBacon",
     dbnSymbol: "DBN",
 
+    name: "TEST",
+    symbol: "TT",
+    maxDemRebels: 10000,
+    demRebelSalePrice: ethers.parseEther("0.0008"),
+    whitelistSalePrice: ethers.parseEther("0.0002"),
+    maxDemRebelsSalePerUser: 10000,
+    isSaleActive: true,
+    cloneBoxURI: "ipfs://QmUzSR5yDqtsjnzfvfFZWe2JyEryhm7UgUfhKr9pkokG7C",
+
     //Cross Chain
     isRootChain: false,
     fxCheckpointManager: "0x2890bA17EfE978480615e330ecB65333b880928e",

@@ -2,11 +2,9 @@
 pragma solidity 0.8.20;
 
 import {LibDiamond} from "../../shared/diamond/lib/LibDiamond.sol";
-//import {LibMeta} from "../../shared/libraries/LibMeta.sol";
-//import "../../shared/helpers/ICheckpointManager.sol";
+import {ICheckpointManager, IFxStateSender} from "../chainBridge/interfaces/ICheckpointManager.sol";
 
 struct DemRebelData {
-//   uint256 tokenId;
     string name;
     address owner;
 }
@@ -36,15 +34,15 @@ struct AppStorage {
     string baseURI2;
     string baseURI3;
     string cloneBoxURI;
-//
-//    // Cross-Chain
-//    ICheckpointManager checkpointManager;
-//    IFxStateSender fxRoot;
-//    address fxChild;
-//    address fxRootTunnel;
-//    address fxChildTunnel;
-//    mapping(bytes32 => bool) processedExits;
-//    mapping (address => address) reflection;
+
+    // Bridge related
+    ICheckpointManager checkpointManager;
+    IFxStateSender fxRoot;
+    address fxChild;
+    address fxRootTunnel;
+    address fxChildTunnel;
+    mapping(bytes32 => bool) processedExits;
+    mapping (address => address) reflection;
     bool isRootChain;
 }
 

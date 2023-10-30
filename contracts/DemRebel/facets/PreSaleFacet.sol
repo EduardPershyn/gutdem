@@ -6,7 +6,7 @@ import {LibDemRebel} from "../libraries/LibDemRebel.sol";
 import {Modifiers} from "../libraries/LibAppStorage.sol";
 import {LibERC721} from "../../shared/libraries/LibERC721.sol";
 
-contract SaleFacet is Modifiers {
+contract PreSaleFacet is Modifiers {
     function isSaleActive() external view returns (bool) {
         return s.isSaleActive;
     }

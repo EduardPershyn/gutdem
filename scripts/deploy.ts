@@ -19,13 +19,18 @@ export async function main(
   }
 
   const dbnAddress = await demBaconDeploy();
-  const [growerAddress, toddlerAddress] = await deployOnChildChain();
+  let growerAddress, toddlerAddress, demRebelAddress;
+  if (isRoot) {
+    [demRebelAddress] = await deployModeRoot();
+  } else {
+    [growerAddress, toddlerAddress, demRebelAddress] = await deployModeChild();
+  }
 
   LOG(`> Total gas used: ${strDisplay(totalGasUsed)}`);
 
   let result = new DeployedContracts({
     demBacon: dbnAddress,
-    demRebel: "",
+    demRebel: demRebelAddress,
     game: "",
     growerDemNft: growerAddress,
     toddlerDemNft: toddlerAddress,
@@ -34,9 +39,54 @@ export async function main(
   });
   return result;
 
-  async function deployOnChildChain(): Promise<[string, string]> {
-    let [growerNftArgs, growerSaleArgs, toddlerNftArgs, toddlerSaleArgs] =
-      await deployFacets("DemNft", "SaleFacet", "DemNft", "SaleFacet");
+  async function deployModeRoot(): Promise<[string]> {
+    const tunnel = tests ? "MockRootTunnel" : "RootTunnel";
+    let [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs] =
+      await deployFacets("DemRebel", "PreSaleFacet", "ChainBridge", tunnel);
+
+    const demRebelAddress = await deployDiamond(
+      "DemRebelDiamond",
+      "contracts/DemRebel/InitDiamond.sol:InitDiamond",
+      [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs],
+      buildRebelArgs(),
+    );
+    {
+      const tunnelFacet = await ethers.getContractAt(
+        tunnel,
+        demRebelAddress,
+        accounts[0],
+      );
+      const tx = await (
+        await tunnelFacet.initializeRoot(cfg.fxRoot, cfg.fxCheckpointManager)
+      ).wait();
+      LOG(`>> initializeRoot gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
+    }
+
+    return [demRebelAddress];
+  }
+
+  async function deployModeChild(): Promise<[string, string, string]> {
+    const tunnel = tests ? "MockChildTunnel" : "ChildTunnel";
+    let [
+      growerNftArgs,
+      growerSaleArgs,
+      toddlerNftArgs,
+      toddlerSaleArgs,
+      demRebelArgs,
+      preSaleFacetArgs,
+      bridgeArgs,
+      tunnelArgs,
+    ] = await deployFacets(
+      "DemNft",
+      "SaleFacet",
+      "DemNft",
+      "SaleFacet",
+      "DemRebel",
+      "PreSaleFacet",
+      "ChainBridge",
+      tunnel,
+    );
 
     const growerAddress = await deployDiamond(
       "Grower DemNft",
@@ -70,6 +120,12 @@ export async function main(
         ],
       ],
     );
+    const demRebelAddress = await deployDiamond(
+      "DemRebelDiamond",
+      "contracts/DemRebel/InitDiamond.sol:InitDiamond",
+      [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs],
+      buildRebelArgs(),
+    );
 
     {
       let demNftSale = await ethers.getContractAt(
@@ -92,7 +148,18 @@ export async function main(
       totalGasUsed += tx.gasUsed;
     }
 
-    return [growerAddress, toddlerAddress];
+    {
+      const tunnelFacet = await ethers.getContractAt(
+        tunnel,
+        demRebelAddress,
+        accounts[0],
+      );
+      const tx = await (await tunnelFacet.initializeChild(cfg.fxChild)).wait();
+      LOG(`>> initializeChild gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
+    }
+
+    return [growerAddress, toddlerAddress, demRebelAddress];
   }
 
   async function demBaconDeploy(): Promise<string> {
@@ -200,6 +267,22 @@ export async function main(
     totalGasUsed += gasCost;
 
     return receipt.contractAddress;
+  }
+
+  function buildRebelArgs() {
+    return [
+      [
+        cfg.name,
+        cfg.symbol,
+        cfg.cloneBoxURI,
+        cfg.maxDemRebels,
+        cfg.demRebelSalePrice,
+        cfg.whitelistSalePrice,
+        cfg.maxDemRebelsSalePerUser,
+        cfg.isSaleActive,
+        isRoot,
+      ],
+    ];
   }
 }
 

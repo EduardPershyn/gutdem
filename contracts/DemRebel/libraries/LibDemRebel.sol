@@ -84,22 +84,6 @@ library LibDemRebel {
         ownerTokenIds.push(tokenId_);
     }
 
-    //
-    //    function adjustChainTransferedRebel(uint256 id, string memory name, address owner) internal {
-    //        AppStorage storage s = LibAppStorage.diamondStorage();
-    //
-    //        s.demRebels[id].tokenId = id;
-    //        s.demRebels[id].name = name;
-    //
-    //        if (s.demRebels[id].owner == address(0)) {
-    //            setOwner(id, owner);
-    //            //LibRebelFarm.setInitGrowerQty(id, 2);
-    //        } else {
-    //            //transfer from blocking storage
-    //            transfer(address(this), owner, id);
-    //        }
-    //    }
-
     function validateAndLowerName(
         string memory _name
     ) internal pure returns (string memory) {
