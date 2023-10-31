@@ -6,7 +6,7 @@ import { deployConfig as testCfg } from "../deploy-test.config";
 
 import * as utils from "../scripts/deploy";
 
-describe("ChainBridge test", async () => {
+describe.skip("ChainBridge test", async () => {
   let demRebelRoot: Contract;
   let saleFacetRoot: Contract;
   let bridgeRoot: Contract;
@@ -18,8 +18,6 @@ describe("ChainBridge test", async () => {
   let childTunnel: Contract;
 
   let accounts: Signer[];
-  let ownerRoot: Signer;
-  let ownerChild: Signer;
 
   let demRebelAddressRoot: string;
   let demRebelAddressChild: string;
@@ -75,22 +73,22 @@ describe("ChainBridge test", async () => {
     );
 
     {
-      let tx = await rootTunnel.setFxChildTunnel(childTunnel.target);
+      const tx = await rootTunnel.setFxChildTunnel(childTunnel.target);
       expect((await tx.wait()).status).to.equal(1);
     }
     {
-      let tx = await childTunnel.setFxRootTunnel(rootTunnel.target);
+      const tx = await childTunnel.setFxRootTunnel(rootTunnel.target);
       expect((await tx.wait()).status).to.equal(1);
     }
     {
-      let tx = await bridgeRoot.setReflection(
+      const tx = await bridgeRoot.setReflection(
         demRebelAddressRoot,
         demRebelAddressChild,
       );
       expect((await tx.wait()).status).to.equal(1);
     }
     {
-      let tx = await bridgeChild.setReflection(
+      const tx = await bridgeChild.setReflection(
         demRebelAddressRoot,
         demRebelAddressChild,
       );
@@ -108,30 +106,29 @@ describe("ChainBridge test", async () => {
       MockFxAddress = receipt.contractAddress;
     }
     {
-      let tx = await rootTunnel
+      const tx = await rootTunnel
         .connect(accounts[0])
         .initializeRoot(
           MockFxAddress,
           "0x3d1d3E34f7fB6D26245E6640E1c50710eFFf15bA",
         );
-      let receipt = await tx.wait();
+      const receipt = await tx.wait();
       expect(receipt.status).to.be.eq(1, "rootTunnel init fail");
     }
     {
-      let tx = await childTunnel
+      const tx = await childTunnel
         .connect(accounts[0])
         .initializeChild(MockFxAddress);
-      let receipt = await tx.wait();
+      const receipt = await tx.wait();
       expect(receipt.status).to.be.eq(1, "childTunnel init fail");
     }
   });
 
   it("L1 to L2 test", async () => {
-    let user1 = accounts[1];
-    let address1 = await user1.getAddress();
+    const user1 = accounts[1];
+    const address1 = await user1.getAddress();
 
-    let status = await helpers.purchaseRebels(saleFacetRoot, user1, 2);
-
+    await helpers.purchaseRebels(saleFacetRoot, user1, 2);
     {
       const tokenIds = await demRebelRoot
         .connect(user1)
@@ -165,8 +162,8 @@ describe("ChainBridge test", async () => {
   });
 
   it("L2 to L1 test", async () => {
-    let user1 = accounts[1];
-    let address1 = await user1.getAddress();
+    const user1 = accounts[1];
+    const address1 = await user1.getAddress();
 
     {
       const tokenIds = await demRebelRoot

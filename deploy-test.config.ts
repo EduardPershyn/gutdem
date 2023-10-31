@@ -9,7 +9,7 @@ export let deployConfig = {
     maxDemRebels: 10000,
     demRebelSalePrice: ethers.parseEther("0.0008"),
     whitelistSalePrice: ethers.parseEther("0.0002"),
-    maxDemRebelsSalePerUser: 10000,
+    maxDemRebelsSalePerUser: 10,
     isSaleActive: true,
     cloneBoxURI: "ipfs://QmUzSR5yDqtsjnzfvfFZWe2JyEryhm7UgUfhKr9pkokG7C",
 
