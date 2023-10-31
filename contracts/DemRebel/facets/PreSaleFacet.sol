@@ -31,6 +31,14 @@ contract PreSaleFacet is Modifiers {
         s.whitelistMerkleRoot = merkleRoot_;
     }
 
+    function maxDemRebelsSalePerUser() external view returns (uint256) {
+        return s.maxDemRebelsSalePerUser;
+    }
+
+    function setMaxDemRebelsSalePerUser(uint256 maxDemRebelsSalePerUser_) external onlyOwner {
+        s.maxDemRebelsSalePerUser = maxDemRebelsSalePerUser_;
+    }
+
     function whitelistSale(
         bytes32[] calldata proof,
         uint256 count_
