@@ -43,7 +43,6 @@ struct AppStorage {
     address fxChildTunnel;
     mapping(bytes32 => bool) processedExits;
     mapping (address => address) reflection;
-    bool isRootChain;
 }
 
 

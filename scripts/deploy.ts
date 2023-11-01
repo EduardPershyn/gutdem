@@ -74,7 +74,6 @@ export async function main(
       toddlerNftArgs,
       toddlerSaleArgs,
       demRebelArgs,
-      preSaleFacetArgs,
       bridgeArgs,
       tunnelArgs,
     ] = await deployFacets(
@@ -83,7 +82,6 @@ export async function main(
       "DemNft",
       "SaleFacet",
       "DemRebel",
-      "PreSaleFacet",
       "ChainBridge",
       tunnel,
     );
@@ -123,7 +121,7 @@ export async function main(
     const demRebelAddress = await deployDiamond(
       "DemRebelDiamond",
       "contracts/DemRebel/InitDiamond.sol:InitDiamond",
-      [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs],
+      [demRebelArgs, bridgeArgs, tunnelArgs],
       buildRebelArgs(),
     );
 
@@ -275,12 +273,11 @@ export async function main(
         cfg.name,
         cfg.symbol,
         cfg.cloneBoxURI,
-        cfg.maxDemRebels,
-        cfg.demRebelSalePrice,
-        cfg.whitelistSalePrice,
-        cfg.maxDemRebelsSalePerUser,
-        cfg.isSaleActive,
-        isRoot,
+        isRoot ? cfg.maxDemRebels : 0,
+        isRoot ? cfg.demRebelSalePrice : 0,
+        isRoot ? cfg.whitelistSalePrice : 0,
+        isRoot ? cfg.maxDemRebelsSalePerUser : 0,
+        isRoot ? cfg.isSaleActive : 0
       ],
     ];
   }

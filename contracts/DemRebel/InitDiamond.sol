@@ -22,8 +22,6 @@ contract InitDiamond {
         uint256 whitelistSalePrice;
         uint256 maxDemRebelsPerUser;
         bool isSaleActive;
-
-        bool isRootChain;
     }
 
     function init(Args memory _args) external {
@@ -43,6 +41,5 @@ contract InitDiamond {
         s.whitelistSalePrice = _args.whitelistSalePrice;
         s.maxDemRebelsSalePerUser = _args.maxDemRebelsPerUser;
         s.isSaleActive = _args.isSaleActive;
-        s.isRootChain = _args.isRootChain;
     }
 }

@@ -88,7 +88,6 @@ contract PreSaleFacet is Modifiers {
     }
 
     function mint(uint256 rebelsCount_) internal virtual {
-        require(s.isRootChain == true, "SaleFacet: Mint allowed only from L1");
         require(
             rebelsCount_ + s.tokenIdsCount <= s.maxDemRebels,
             "SaleFacet: Exceeded maximum DemRebels supply"
