@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
 import {LibDemRebel} from "../libraries/LibDemRebel.sol";
 import {Modifiers} from "../libraries/LibAppStorage.sol";
-import {LibERC721} from "../../shared/libraries/LibERC721.sol";
 
 contract PreSaleFacet is Modifiers {
+    using BitMaps for BitMaps.BitMap;
+
     function isSaleActive() external view returns (bool) {
         return s.isSaleActive;
     }
@@ -19,57 +23,52 @@ contract PreSaleFacet is Modifiers {
         return s.isWhitelistActive;
     }
 
-    function isClaimed(address owner_) external view returns (bool) {
-        return s.whitelistClaimed[owner_];
+    function isClaimed(uint256 ticketNumber_) external view returns (bool) {
+        return !s.wlBitMap.get(ticketNumber_);
     }
 
     function setWhitelistActive(bool isActive_) external onlyOwner {
         s.isWhitelistActive = isActive_;
     }
 
-    function setWhitelistMerkleRoot(bytes32 merkleRoot_) external onlyOwner {
-        s.whitelistMerkleRoot = merkleRoot_;
+    function setPublicMintingAddress(address address_) external onlyOwner {
+        s.publicMintingAddress = address_;
     }
 
     function maxDemRebelsSalePerUser() external view returns (uint256) {
         return s.maxDemRebelsSalePerUser;
     }
 
-    function setMaxDemRebelsSalePerUser(uint256 maxDemRebelsSalePerUser_) external onlyOwner {
+    function setMaxDemRebelsSalePerUser(
+        uint256 maxDemRebelsSalePerUser_
+    ) external onlyOwner {
         s.maxDemRebelsSalePerUser = maxDemRebelsSalePerUser_;
     }
 
     function whitelistSale(
-        bytes32[] calldata proof,
-        uint256 count_
+        bytes calldata signature_,
+        uint256 ticketNumber_
     ) external payable {
-        // Merkle tree list related
         require(s.isWhitelistActive, "SaleFacet: Whitelist sale is disabled");
         require(
-            s.whitelistClaimed[msg.sender] == false,
-            "SaleFacet: Address already used whitelist sale"
-        );
-        require(
-            s.whitelistMerkleRoot != "",
-            "SaleFacet: Whitelist claim merkle root not set"
-        );
-        require(
-            MerkleProof.verify(
-                proof,
-                s.whitelistMerkleRoot,
-                keccak256(abi.encodePacked(msg.sender, count_))
-            ),
-            "SaleFacet: Whitelist claim validation failed"
+            s.wlBitMap.get(ticketNumber_) == true,
+            "SaleFacet: Already claimed"
         );
 
-        // Go mint
+        bytes32 hash = MessageHashUtils.toEthSignedMessageHash(
+            keccak256(abi.encodePacked(msg.sender, ticketNumber_))
+        );
         require(
-            s.whitelistSalePrice * count_ <= msg.value,
+            s.publicMintingAddress == ECDSA.recover(hash, signature_),
+            "SaleFacet: Sig validation failed"
+        );
+        s.wlBitMap.unset(ticketNumber_);
+
+        require(
+            s.whitelistSalePrice <= msg.value,
             "SaleFacet: Insufficient ethers value"
         );
-        mint(count_);
-
-        s.whitelistClaimed[msg.sender] = true;
+        mint(1);
     }
 
     function withdraw() external onlyOwner {
@@ -87,7 +86,7 @@ contract PreSaleFacet is Modifiers {
         mint(count_);
     }
 
-    function mint(uint256 rebelsCount_) internal virtual {
+    function mint(uint256 rebelsCount_) internal {
         require(
             rebelsCount_ + s.tokenIdsCount <= s.maxDemRebels,
             "SaleFacet: Exceeded maximum DemRebels supply"

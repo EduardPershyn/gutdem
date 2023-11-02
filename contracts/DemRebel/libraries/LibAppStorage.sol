@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+
 import {LibDiamond} from "../../shared/diamond/lib/LibDiamond.sol";
 import {ICheckpointManager, IFxStateSender} from "../chainBridge/interfaces/ICheckpointManager.sol";
 
@@ -18,10 +20,10 @@ struct AppStorage {
     string symbol;
     uint256 tokenIdsCount;
 
-    bytes32 whitelistMerkleRoot;
     uint256 whitelistSalePrice;
-    mapping(address => bool) whitelistClaimed;
     bool isWhitelistActive;
+    address publicMintingAddress;
+    BitMaps.BitMap wlBitMap;
 
     mapping(uint256 => DemRebelData) demRebels;
     mapping(address => uint256[]) ownerTokenIds;

@@ -41,5 +41,11 @@ contract InitDiamond {
         s.whitelistSalePrice = _args.whitelistSalePrice;
         s.maxDemRebelsSalePerUser = _args.maxDemRebelsPerUser;
         s.isSaleActive = _args.isSaleActive;
+
+        // Init whitelistSale bitmap
+        uint256 bucketsCount = s.maxDemRebels / 256 + 1;
+        for (uint bucket = 0; bucket < bucketsCount; ++bucket) {
+            s.wlBitMap._data[bucket] = type(uint256).max;
+        }
     }
 }

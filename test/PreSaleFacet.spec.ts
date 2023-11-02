@@ -1,4 +1,4 @@
-import { assert, expect } from "chai";
+import { expect } from "chai";
 import { Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { helpers } from "./shared/helpers";
@@ -6,9 +6,8 @@ import { deployConfig as testCfg } from "../deploy-test.config";
 
 import * as utils from "../scripts/deploy";
 
-describe.skip("DemRebel PreSaleFacet Test", async () => {
+describe("DemRebel PreSaleFacet Test", async () => {
   let preSaleFacet: Contract;
-  let demRebel: Contract;
 
   let accounts: Signer[];
 
@@ -22,11 +21,6 @@ describe.skip("DemRebel PreSaleFacet Test", async () => {
 
     preSaleFacet = await ethers.getContractAt(
       "PreSaleFacet",
-      demRebelAddress,
-      accounts[0],
-    );
-    demRebel = await ethers.getContractAt(
-      "DemRebel",
       demRebelAddress,
       accounts[0],
     );
@@ -81,39 +75,48 @@ describe.skip("DemRebel PreSaleFacet Test", async () => {
     }
   });
 
-  it("Should buy from whitelisted address", async () => {
-    const account = accounts[1];
-    const address = await account.getAddress();
-    //console.log("account address", accounts[1].getAddress());
+  it("Whitelisted sale test", async () => {
+    const signer = accounts[0];
+    const signPublic = await signer.getAddress();
+    const user = accounts[1];
+    const address = await user.getAddress();
+
     {
       const tx = await preSaleFacet.setWhitelistActive(true);
       expect((await tx.wait()).status).to.be.equal(1);
     }
     {
-      const root =
-        "0x4ab7dfe706af9f8dd8da5e2e026e3ca332f10d64f8d8c2e9dc7e9e61e065d53f";
-      const tx = await preSaleFacet.setWhitelistMerkleRoot(root);
-      assert.equal((await tx.wait()).status, true, "root should be set");
+      const tx = await preSaleFacet.setPublicMintingAddress(signPublic);
+      expect((await tx.wait()).status).to.be.equal(1);
+    }
+
+    const ticketNumber = testCfg.maxDemRebels - 1;
+    const msg = ethers.solidityPackedKeccak256(
+      ["address", "uint256"],
+      [address, ticketNumber],
+    );
+    const sig1 = await signer.provider.send("eth_sign", [signPublic, msg]);
+    //     const sig2 = await signer.provider.send("personal_sign",
+    //       [msg, signPublic]
+    //     );
+    //     console.log(sig2);
+    //
+    //     const sig3 = await signer.signMessage(msg);
+    //     console.log(sig3);
+
+    {
+      const tx = await preSaleFacet
+        .connect(user)
+        .whitelistSale(sig1, ticketNumber, {
+          value: testCfg.whitelistSalePrice,
+        });
+      expect((await tx.wait()).status).to.be.equal(1);
     }
     {
-      const proof = [
-        "0xcac43c0291466ae54aa0b5f0d6f0faa97deb84693cf7664e857b86220880a388",
-        "0xbf9f19376d0ac223168dbe9fab25bb273c0cf5e8b5b6ff1e84210004725d0a74",
-      ];
-      const count = 3;
-      const tx = await preSaleFacet
-        .connect(account)
-        .whitelistSale(proof, count, {
-          value: testCfg.whitelistSalePrice * BigInt(count),
-        });
-      assert.equal((await tx.wait()).status, true, "whitelistSale error");
-
-      const tokenIds = await demRebel.connect(account).tokenIdsOfOwner(address);
-      assert.equal(
-        tokenIds.length,
-        count + 5000,
-        "error: tokenIds length after buy",
-      );
+      const tx = preSaleFacet.connect(user).whitelistSale(sig1, ticketNumber, {
+        value: testCfg.whitelistSalePrice,
+      });
+      await expect(tx).to.be.revertedWith("SaleFacet: Already claimed");
     }
   });
 });
