@@ -20,6 +20,8 @@ struct AppStorage {
     string symbol;
     uint256 tokenIdsCount;
 
+    address rewardManager;
+
     uint256 whitelistSalePrice;
     bool isWhitelistActive;
     address publicMintingAddress;
@@ -68,6 +70,14 @@ contract Modifiers {
         require(
             LibDiamond.contractOwner() == msg.sender,
             "LibAppStorage: Only owner"
+        );
+        _;
+    }
+
+    modifier onlyRewardManager() {
+        require(
+            s.rewardManager == msg.sender,
+            "LibAppStorage: Only reward manager"
         );
         _;
     }

@@ -1,69 +1,44 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+
 import {Modifiers} from "../libraries/LibAppStorage.sol";
 import {LibRebelFarm} from "../libraries/LibRebelFarm.sol";
 import {LibFarmRaid} from "../libraries/LibFarmRaid.sol";
 import {LibFarmCalc} from "../libraries/LibFarmCalc.sol";
-import {IERC721} from "@openzeppelin/contracts/interfaces/IERC721.sol";
 
 contract RebelFarm is Modifiers {
-    function activateFarm(uint256 id_) external {
+    using BitMaps for BitMaps.BitMap;
+
+    function activateFarm(
+        uint256 id_,
+        uint256[] calldata growerIds_,
+        uint256[] calldata toddlerIds_
+    ) external onlyDemRebelOwner(id_) {
         require(
             LibRebelFarm.isFarmActivated(id_) == false,
             "RebelFarm: Farm is already activated"
         );
 
         s.farmTier[id_] = 1;
+
+        LibRebelFarm.addGrowers(id_, growerIds_);
+        LibRebelFarm.addToddlers(id_, toddlerIds_);
+
+        LibRebelFarm.updateHarvestTimestamp(id_);
+        LibRebelFarm.addToTierIndex(id_, s.farmTier[id_]);
     }
 
     function isFarmActivated(uint256 id_) external view returns (bool) {
         return LibRebelFarm.isFarmActivated(id_);
     }
 
-    function startFarm(
-        uint256 id_,
-        uint256 growerQty_,
-        uint256 toddlerQty_
-    ) external onlyDemRebelOwner(id_) {
-        require(
-            LibRebelFarm.isFarmActivated(id_) == true,
-            "RebelFarm: Farm is not activated"
-        );
-
-        LibRebelFarm.pullRebel(id_);
-        LibRebelFarm.pullGrowers(id_, growerQty_);
-        LibRebelFarm.pullToddlers(id_, toddlerQty_);
-
-        LibRebelFarm.updateHarvestTimestamp(id_);
-
-        LibRebelFarm.addToTierIndex(id_, s.farmTier[id_]);
-    }
-
-    function stopFarm(uint256 id_) external onlyFarmOwner(id_) {
-        require(
-            LibFarmRaid.isRaidOngoing(id_) == false,
-            "RebelFarm: Farm raid is ongoing"
-        );
-
-        LibRebelFarm.harvest(id_);
-
-        LibRebelFarm.releaseToddlers(id_, LibRebelFarm.farmToddlerQty(id_));
-        LibRebelFarm.releaseGrowers(id_, LibRebelFarm.farmGrowerQty(id_));
-        LibRebelFarm.releaseRebel(id_);
-
-        LibRebelFarm.removeFromTierIndex(id_, s.farmTier[id_]);
-    }
-
-    function isFarmStarted(uint256 id_) external view returns (bool) {
-        return LibRebelFarm.isFarmStarted(id_);
-    }
-
     function harvestAmount(uint256 id_) external view returns (uint256) {
         return LibRebelFarm.harvestAmount(id_);
     }
 
-    function harvestFarm(uint256 id_) external onlyFarmOwner(id_) {
+    function harvestFarm(uint256 id_) external onlyDemRebelOwner(id_) {
         LibRebelFarm.harvest(id_);
     }
 
@@ -71,7 +46,7 @@ contract RebelFarm is Modifiers {
         return s.farmPeriod;
     }
 
-    function setRebelFarmPeriod(uint256 period_) external onlyOwner {
+    function setRebelFarmPeriod(uint256 period_) external onlyGameManager {
         require(period_ > 0, "RebelFarm: Period should be greater than 0");
         s.farmPeriod = period_;
     }
@@ -84,9 +59,9 @@ contract RebelFarm is Modifiers {
         return LibRebelFarm.farmUpgradeCooldown(id_);
     }
 
-    function increaseTier(uint256 id_) external {
+    function increaseTier(uint256 id_) external onlyDemRebelOwner(id_) {
         require(
-            LibRebelFarm.isFarmActivated(id_) == true,
+            LibRebelFarm.isFarmActivated(id_),
             "RebelFarm: Farm is not activated"
         );
         require(s.farmTier[id_] < s.farmMaxTier, "RebelFarm: Exceeds max tier");
@@ -94,62 +69,49 @@ contract RebelFarm is Modifiers {
             LibRebelFarm.farmUpgradeCooldown(id_) == 0,
             "RebelFarm: Upgrade cooldown"
         );
-        require(
-            (s.rebelInFarmOwner[id_] == msg.sender) ||
-                (IERC721(s.demRebelAddress).ownerOf(id_) == msg.sender),
-            "RebelFarm: Only rebel/farm owner"
-        );
 
         LibRebelFarm.payFromSafe(
             id_,
             LibFarmCalc.upgradeCost(s.farmTier[id_] + 1)
         );
 
-        if (LibRebelFarm.isFarmStarted(id_)) {
-            LibRebelFarm.updateHarvestStock(id_);
-            LibRebelFarm.removeFromTierIndex(id_, s.farmTier[id_]);
-            LibRebelFarm.addToTierIndex(id_, s.farmTier[id_] + 1);
-        }
+        LibRebelFarm.updateHarvestStock(id_);
+        LibRebelFarm.removeFromTierIndex(id_, s.farmTier[id_]);
+        LibRebelFarm.addToTierIndex(id_, s.farmTier[id_] + 1);
 
         s.farmTier[id_] += 1;
         s.farmUpgradeTime[id_] = block.timestamp;
     }
 
-    function addGrowers(
-        uint256 id_,
-        uint256 count_
-    ) external onlyFarmOwner(id_) {
+    function addGrowers(uint256 id_, uint256[] calldata growerIds_) external {
         LibRebelFarm.updateHarvestStock(id_);
-        LibRebelFarm.pullGrowers(id_, count_);
+        LibRebelFarm.addGrowers(id_, growerIds_);
     }
 
     function removeGrowers(
         uint256 id_,
-        uint256 count_
-    ) external onlyFarmOwner(id_) {
+        uint256[] calldata growerIds_
+    ) external {
         LibRebelFarm.updateHarvestStock(id_);
-        LibRebelFarm.releaseGrowers(id_, count_);
+        LibRebelFarm.releaseGrowers(id_, growerIds_);
     }
 
-    function addToddlers(
-        uint256 id_,
-        uint256 count_
-    ) external onlyFarmOwner(id_) {
+    function addToddlers(uint256 id_, uint256[] calldata toddlerIds_) external {
         LibRebelFarm.updateHarvestStock(id_);
-        LibRebelFarm.pullToddlers(id_, count_);
+        LibRebelFarm.addToddlers(id_, toddlerIds_);
     }
 
     function removeToddlers(
         uint256 id_,
-        uint256 count_
-    ) external onlyFarmOwner(id_) {
+        uint256[] calldata toddlerIds_
+    ) external {
         require(
             LibFarmRaid.isRaidOngoing(id_) == false,
             "RebelFarm: Farm raid is ongoing"
         );
 
         LibRebelFarm.updateHarvestStock(id_);
-        LibRebelFarm.releaseToddlers(id_, count_);
+        LibRebelFarm.releaseToddlers(id_, toddlerIds_);
     }
 
     function getFarmTier(uint256 id_) external view returns (uint256) {
@@ -162,17 +124,6 @@ contract RebelFarm is Modifiers {
 
     function growerCount(uint256 id_) external view returns (uint256) {
         return LibRebelFarm.farmGrowerQty(id_);
-    }
-
-    function getFarmIdsForOwner(
-        address owner_
-    ) external view returns (uint256[] memory farmIds_) {
-        farmIds_ = s.farmIdsForOwner[owner_];
-    }
-
-    function farmOwner(uint256 id_) external view returns (address owner_) {
-        owner_ = s.rebelInFarmOwner[id_];
-        require(owner_ != address(0), "RebelFarm: Farm is not started!");
     }
 
     function tierUpgradeCost(uint256 tier_) external pure returns (uint256) {

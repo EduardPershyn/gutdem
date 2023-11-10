@@ -1,170 +1,147 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+
 import {LibFarmCalc} from "./LibFarmCalc.sol";
 import {LibAppStorage, AppStorage} from "./LibAppStorage.sol";
 import {IERC721} from "@openzeppelin/contracts/interfaces/IERC721.sol";
-import {IERC721TokenIds} from "../../shared/interfaces/IERC721TokenIds.sol";
 import {ISafe} from "../interfaces/ISafe.sol";
 
 library LibRebelFarm {
+    using BitMaps for BitMaps.BitMap;
+
     function isFarmActivated(uint256 id_) internal view returns (bool) {
         AppStorage storage s = LibAppStorage.diamondStorage();
         return s.farmTier[id_] != 0;
     }
 
-    function isFarmStarted(uint256 id_) internal view returns (bool) {
-        AppStorage storage s = LibAppStorage.diamondStorage();
-        return s.rebelInFarmOwner[id_] != address(0);
-    }
-
-    function pullRebel(uint256 id_) internal {
+    function addGrowers(uint256 id_, uint256[] calldata growerIds_) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
-        IERC721(s.demRebelAddress).transferFrom(msg.sender, address(this), id_);
-        s.rebelInFarmOwner[id_] = msg.sender;
-
-        //Add to address FarmIds cache
-        s.farmIdsForOwnerIndexes[msg.sender][id_] = s
-            .farmIdsForOwner[msg.sender]
-            .length;
-        s.farmIdsForOwner[msg.sender].push(id_);
-    }
-
-    function releaseRebel(uint256 id_) internal {
-        AppStorage storage s = LibAppStorage.diamondStorage();
-
-        address owner = s.rebelInFarmOwner[id_];
-        IERC721(s.demRebelAddress).transferFrom(address(this), owner, id_);
-        delete s.rebelInFarmOwner[id_];
-
-        //Clear from address FarmIds cache
-        uint256 index = s.farmIdsForOwnerIndexes[owner][id_];
-        uint256 lastIndex = s.farmIdsForOwner[owner].length - 1;
-        if (index != lastIndex) {
-            uint256 lastTokenId = s.farmIdsForOwner[owner][lastIndex];
-            s.farmIdsForOwner[owner][index] = lastTokenId;
-            s.farmIdsForOwnerIndexes[owner][lastTokenId] = index;
-        }
-        s.farmIdsForOwner[owner].pop();
-        delete s.farmIdsForOwnerIndexes[owner][id_];
-    }
-
-    function pullGrowers(uint256 id_, uint256 growerQty_) internal {
-        AppStorage storage s = LibAppStorage.diamondStorage();
-
-        uint256[] memory growerIds = IERC721TokenIds(s.demGrowerAddress)
-            .tokenIdsOfOwner(msg.sender);
-        require(
-            growerIds.length >= growerQty_,
-            "LibRebelFarm: Not enough growers on account!"
-        );
-
+        uint256 idsCount = growerIds_.length;
         require(
             LibFarmCalc.maxGrowSpots(s.farmTier[id_]) >=
-                farmGrowerQty(id_) + growerQty_,
+                s.farmGrowersCount[id_] + idsCount,
             "LibRebelFarm: Insufficient farm tier"
         );
 
-        for (uint256 index = 0; index < growerQty_; index++) {
-            uint256 growerId = growerIds[index];
-            IERC721(s.demGrowerAddress).transferFrom(
-                msg.sender,
-                address(this),
-                growerId
+        for (uint256 i; i < idsCount; ++i) {
+            uint256 id = growerIds_[i];
+
+            require(
+                IERC721(s.demGrowerAddress).ownerOf(id) == msg.sender,
+                "LibRebelFarm: sender is not grower owner"
             );
-            s.rebelFarmGrowers[id_].push(growerId);
-        }
-    }
-
-    function releaseGrowers(uint256 id_, uint256 growerQty_) internal {
-        AppStorage storage s = LibAppStorage.diamondStorage();
-
-        require(
-            farmGrowerQty(id_) >= growerQty_,
-            "LibRebelFarm: Pulled growers count under requested value!"
-        );
-
-        address owner = s.rebelInFarmOwner[id_];
-        for (int256 i = int256(growerQty_) - 1; i >= 0; --i) {
-            uint256 index = uint256(i);
-            uint256 growerId = s.rebelFarmGrowers[id_][index];
-            IERC721(s.demGrowerAddress).transferFrom(
-                address(this),
-                owner,
-                growerId
+            require(
+                s.growerInFarm.get(id) == false,
+                "LibRebelFarm: Grower already in farm"
             );
 
-            uint256 lastIndex = s.rebelFarmGrowers[id_].length - 1;
-            s.rebelFarmGrowers[id_][index] = s.rebelFarmGrowers[id_][lastIndex];
-            s.rebelFarmGrowers[id_].pop();
+            s.growerInFarm.set(id);
         }
+        s.farmGrowersCount[id_] += idsCount;
     }
 
-    function pullToddlers(uint256 id_, uint256 toddlerQty_) internal {
+    function releaseGrowers(
+        uint256 id_,
+        uint256[] calldata growerIds_
+    ) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
-        uint256[] memory toddlerIds = IERC721TokenIds(s.demToddlerAddress)
-            .tokenIdsOfOwner(msg.sender);
+        uint256 idsCount = growerIds_.length;
         require(
-            toddlerIds.length >= toddlerQty_,
-            "LibRebelFarm: Not enough toddlers on account!"
+            s.farmGrowersCount[id_] >= idsCount,
+            "LibRebelFarm: Not enough growers in farm"
         );
 
+        for (uint256 i; i < idsCount; ++i) {
+            uint256 id = growerIds_[i];
+
+            require(
+                IERC721(s.demGrowerAddress).ownerOf(id) == msg.sender,
+                "LibRebelFarm: sender is not grower owner"
+            );
+            require(
+                s.growerInFarm.get(id) == true,
+                "LibRebelFarm: Grower is not in farm"
+            );
+
+            s.growerInFarm.unset(id);
+        }
+        s.farmGrowersCount[id_] -= idsCount;
+    }
+
+    function addToddlers(uint256 id_, uint256[] calldata toddlerIds_) internal {
+        AppStorage storage s = LibAppStorage.diamondStorage();
+
+        uint256 idsCount = toddlerIds_.length;
         require(
-            farmToddlerQty(id_) + toddlerQty_ <= s.toddlerMaxCount,
+            s.farmToddlersCount[id_] + idsCount <= s.toddlerMaxCount,
             "LibRebelFarm: Above toddlers limit"
         );
 
-        for (uint256 index = 0; index < toddlerQty_; index++) {
-            uint256 toddlerId = toddlerIds[index];
-            IERC721(s.demToddlerAddress).transferFrom(
-                msg.sender,
-                address(this),
-                toddlerId
+        for (uint256 i; i < idsCount; ++i) {
+            uint256 id = toddlerIds_[i];
+
+            require(
+                IERC721(s.demToddlerAddress).ownerOf(id) == msg.sender,
+                "LibRebelFarm: sender is not toddler owner"
             );
-            s.rebelFarmToddlers[id_].push(toddlerId);
+            require(
+                s.toddlerInFarm.get(id) == false,
+                "LibRebelFarm: Toddler already in farm"
+            );
+
+            s.toddlerInFarm.set(id);
         }
+        s.farmToddlersCount[id_] += idsCount;
     }
 
-    function releaseToddlers(uint256 id_, uint256 toddlerQty_) internal {
+    function releaseToddlers(
+        uint256 id_,
+        uint256[] calldata toddlerIds_
+    ) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
+        uint256 idsCount = toddlerIds_.length;
         require(
-            farmToddlerQty(id_) >= toddlerQty_,
-            "LibRebelFarm: Pulled toddlers count under requested value!"
+            s.farmToddlersCount[id_] >= idsCount,
+            "LibRebelFarm: Not enough toddlers in farm"
         );
 
-        address owner = s.rebelInFarmOwner[id_];
-        for (int256 i = int256(toddlerQty_) - 1; i >= 0; --i) {
-            uint256 index = uint256(i);
-            uint256 toddlerId = s.rebelFarmToddlers[id_][index];
-            IERC721(s.demToddlerAddress).transferFrom(
-                address(this),
-                owner,
-                toddlerId
+        for (uint256 i; i < idsCount; ++i) {
+            uint256 id = toddlerIds_[i];
+
+            require(
+                IERC721(s.demToddlerAddress).ownerOf(id) == msg.sender,
+                "LibRebelFarm: sender is not toddler owner"
+            );
+            require(
+                s.toddlerInFarm.get(id) == true,
+                "LibRebelFarm: Toddler is not in farm"
             );
 
-            uint256 lastIndex = s.rebelFarmToddlers[id_].length - 1;
-            s.rebelFarmToddlers[id_][index] = s.rebelFarmToddlers[id_][
-                lastIndex
-            ];
-            s.rebelFarmToddlers[id_].pop();
+            s.toddlerInFarm.unset(id);
         }
+        s.farmToddlersCount[id_] -= idsCount;
     }
 
     function farmToddlerQty(uint256 id_) internal view returns (uint256) {
         AppStorage storage s = LibAppStorage.diamondStorage();
-        return s.rebelFarmToddlers[id_].length;
+        return s.farmToddlersCount[id_];
     }
 
     function farmGrowerQty(uint256 id_) internal view returns (uint256) {
         AppStorage storage s = LibAppStorage.diamondStorage();
-        return s.rebelFarmGrowers[id_].length;
+        return s.farmGrowersCount[id_];
     }
 
     function harvest(uint256 id_) internal {
-        require(isFarmStarted(id_), "LibRebelFarm: Rebel Farm not started!");
+        require(
+            isFarmActivated(id_),
+            "LibRebelFarm: Rebel Farm not activated!"
+        );
 
         AppStorage storage s = LibAppStorage.diamondStorage();
 

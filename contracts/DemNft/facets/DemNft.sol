@@ -25,7 +25,7 @@ contract DemNft is Modifiers {
 
     /// @notice Change base URI of the NFT assets metadata
     /// @param uri_ Base URI of the NFT assets metadata
-    function setBaseURI(string memory uri_) external onlyOwner {
+    function setBaseURI(string memory uri_) external onlyRewardManager {
         s.baseURI = uri_;
     }
 

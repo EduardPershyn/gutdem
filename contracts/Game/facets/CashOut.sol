@@ -10,7 +10,7 @@ contract CashOut is Modifiers {
     function startNewCashOutEpoch(
         uint256 tokensMass_,
         uint256 exchangeRate_
-    ) external onlyOwner {
+    ) external onlyGameManager {
         s.tokensMass = tokensMass_;
         s.tokensExchangeRate = exchangeRate_;
 
@@ -26,15 +26,15 @@ contract CashOut is Modifiers {
      * Could also be limited by other factors.
      * Takes one of Min(remaining dbn in pool, farm pool share, farm harverst tokens)
      */
-    function cashOut(uint256 id_) external onlyFarmOwner(id_) {
+    function cashOut(uint256 id_) external onlyDemRebelOwner(id_) {
         require(
             s.epochToFarmCashOut[s.epochNumber][id_] == false,
-            "RebelFarm: Farm already cash out on this epoch!"
+            "CashOut: Farm already cash out on this epoch!"
         );
-        require(s.remainingEpochPool > 0, "RebelFarm: Token pool is empty!");
+        require(s.remainingEpochPool > 0, "CashOut: Token pool is empty!");
 
         uint256 tokensInSafe = ISafe(s.safeAddress).getSafeContent(id_);
-        require(tokensInSafe > 0, "RebelFarm: Farm Safe is empty!");
+        require(tokensInSafe > 0, "CashOut: Farm Safe is empty!");
 
         uint256 tokenToSpend;
         uint256 dbnAmount;
@@ -65,15 +65,15 @@ contract CashOut is Modifiers {
     ) external view returns (uint256 tokenToSpend, uint256 dbnAmount) {
         require(
             s.epochToFarmCashOut[s.epochNumber][id_] == false,
-            "RebelFarmFacet: Farm already cash out on this epoch!"
+            "CashOut: Farm already cash out on this epoch!"
         );
         require(
             s.remainingEpochPool > 0,
-            "RebelFarmFacet: Token pool is empty!"
+            "CashOut: Token pool is empty!"
         );
 
         uint256 tokensInSafe = ISafe(s.safeAddress).getSafeContent(id_);
-        require(tokensInSafe > 0, "RebelFarmFacet: Farm Safe is empty!");
+        require(tokensInSafe > 0, "CashOut: Farm Safe is empty!");
 
         return
             LibFarmCalc.farmTokenToDbnSwapPair(
@@ -92,31 +92,31 @@ contract CashOut is Modifiers {
         //            100_000, 1_300_000, 5 ether);
     }
 
-    function isFarmCashOut(uint256 _farmId) external view returns (bool) {
-        return s.epochToFarmCashOut[s.epochNumber][_farmId];
+    function isFarmCashOut(uint256 id_) external view returns (bool) {
+        return s.epochToFarmCashOut[s.epochNumber][id_];
     }
 
     function buyFarmTokens(
-        uint256 _farmId,
-        uint256 _dbnAmount
-    ) external onlyFarmOwner(_farmId) {
+        uint256 id_,
+        uint256 dbnAmount_
+    ) external onlyDemRebelOwner(id_) {
         IERC20(s.demBaconAddress).transferFrom(
             msg.sender,
             s.safeAddress,
-            _dbnAmount
-        );
+            dbnAmount_
+        ); //TODO ??
 
         uint256 farmTokensAmount = LibFarmCalc.dbnToFarmTokens(
-            _dbnAmount,
+            dbnAmount_,
             s.tokensExchangeRate
         );
-        ISafe(s.safeAddress).increaseSafeEntry(_farmId, farmTokensAmount);
+        ISafe(s.safeAddress).increaseSafeEntry(id_, farmTokensAmount);
     }
 
     function getFarmTokensAmountFromDbn(
-        uint256 _dbnAmount
+        uint256 dbnAmount_
     ) external view returns (uint256) {
-        return LibFarmCalc.dbnToFarmTokens(_dbnAmount, s.tokensExchangeRate);
+        return LibFarmCalc.dbnToFarmTokens(dbnAmount_, s.tokensExchangeRate);
     }
 
     function getRemainingEpochPool() external view returns (uint256) {
@@ -131,7 +131,7 @@ contract CashOut is Modifiers {
         return s.poolShareFactor;
     }
 
-    function setPoolShareFactor(uint256 factor_) external onlyOwner {
+    function setPoolShareFactor(uint256 factor_) external onlyGameManager {
         s.poolShareFactor = factor_;
     }
 }

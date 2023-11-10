@@ -11,11 +11,15 @@ import {Modifiers} from "../libraries/LibAppStorage.sol";
 contract PreSaleFacet is Modifiers {
     using BitMaps for BitMaps.BitMap;
 
+    function setRewardManager(address rewardManager_) external onlyOwner {
+        s.rewardManager = rewardManager_;
+    }
+
     function isSaleActive() external view returns (bool) {
         return s.isSaleActive;
     }
 
-    function setSaleIsActive(bool isActive_) external onlyOwner {
+    function setSaleIsActive(bool isActive_) external onlyRewardManager {
         s.isSaleActive = isActive_;
     }
 
@@ -27,11 +31,11 @@ contract PreSaleFacet is Modifiers {
         return !s.wlBitMap.get(ticketNumber_);
     }
 
-    function setWhitelistActive(bool isActive_) external onlyOwner {
+    function setWhitelistActive(bool isActive_) external onlyRewardManager {
         s.isWhitelistActive = isActive_;
     }
 
-    function setPublicMintingAddress(address address_) external onlyOwner {
+    function setPublicMintingAddress(address address_) external onlyRewardManager {
         s.publicMintingAddress = address_;
     }
 
@@ -41,7 +45,7 @@ contract PreSaleFacet is Modifiers {
 
     function setMaxDemRebelsSalePerUser(
         uint256 maxDemRebelsSalePerUser_
-    ) external onlyOwner {
+    ) external onlyRewardManager {
         s.maxDemRebelsSalePerUser = maxDemRebelsSalePerUser_;
     }
 
@@ -71,7 +75,7 @@ contract PreSaleFacet is Modifiers {
         mint(1);
     }
 
-    function withdraw() external onlyOwner {
+    function withdraw() external onlyRewardManager {
         uint256 balance = address(this).balance;
         (bool success, ) = msg.sender.call{value: balance}("");
         require(success, "SaleFacet: Withdraw failed");

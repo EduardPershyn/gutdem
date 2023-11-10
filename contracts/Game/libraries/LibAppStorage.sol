@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+
 import {LibDiamond} from "../../shared/diamond/lib/LibDiamond.sol";
 import {IERC721} from "@openzeppelin/contracts/interfaces/IERC721.sol";
 
@@ -54,11 +56,10 @@ struct AppStorage {
     mapping(uint256 => mapping(uint256 => uint256)) tierFarmIdIndexes;
 
     //Nfts for Farm
-    mapping(address => uint256[]) farmIdsForOwner;
-    mapping(address => mapping(uint256 => uint256)) farmIdsForOwnerIndexes;
-    mapping(uint256 => address) rebelInFarmOwner;
-    mapping(uint256 => uint256[]) rebelFarmGrowers;
-    mapping(uint256 => uint256[]) rebelFarmToddlers;
+    BitMaps.BitMap growerInFarm;
+    BitMaps.BitMap toddlerInFarm;
+    mapping(uint256 => uint256) farmGrowersCount;
+    mapping(uint256 => uint256) farmToddlersCount;
 
     //Raids
 //    mapping(uint256 => uint256) scoutedFarm;
@@ -130,12 +131,6 @@ contract Modifiers {
 
     modifier onlyGameManager() {
         require(s.gameManagers[msg.sender], "LibAppStorage: Only Game manager");
-        _;
-    }
-
-    modifier onlyFarmOwner(uint256 farmId_) {
-        require(s.rebelInFarmOwner[farmId_] == msg.sender,
-            "LibAppStorage: Only farm owner");
         _;
     }
 }
