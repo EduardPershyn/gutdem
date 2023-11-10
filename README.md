@@ -1,8 +1,13 @@
-# Sample Hardhat Project
+# DemRebels contracts
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+Game ecosystem with shared tokenomics and built-in play-to-earn and NFT mechanics
 
-Try running some of the following tasks:
+## Installation
+```sh
+npm install
+echo YOUR_WALLET_PRIVATE_KEY > .secret
+echo INFURA_KEY > .infura
+```
 
 ```shell
 npx hardhat help
