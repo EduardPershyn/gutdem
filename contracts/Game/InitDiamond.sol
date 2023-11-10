@@ -18,18 +18,18 @@ contract InitDiamond {
         address demGrowerAddress;
         address demToddlerAddress;
         address safeAddress;
-//
-//        uint256 farmPeriod;
-//        uint256 farmMaxTier;
-//        uint256 toddlerMaxCount;
-//        uint256 basicLootShare;
-//        uint256 farmRaidDuration;
-//        uint256 prizeValue;
-//
+
+        uint256 farmPeriod;
+        uint256 farmMaxTier;
+        uint256 toddlerMaxCount;
+        uint256 basicLootShare;
+        uint256 farmRaidDuration;
+        uint256 prizeValue;
+
         uint256 poolShareFactor;
-//
-//        uint256 vrfFee;
-//        bytes32 vrfKeyHash;
+
+        uint256 vrfFee;
+        bytes32 vrfKeyHash;
     }
 
     function init(Args memory _args) external {
@@ -44,19 +44,19 @@ contract InitDiamond {
         s.demGrowerAddress = _args.demGrowerAddress;
         s.demToddlerAddress = _args.demToddlerAddress;
         s.safeAddress = _args.safeAddress;
-//
-//        s.farmPeriod = _args.farmPeriod;
-//        s.farmMaxTier = _args.farmMaxTier;
-//        s.toddlerMaxCount = _args.toddlerMaxCount;
-//        s.basicLootShare = _args.basicLootShare;
-//        s.farmRaidDuration = _args.farmRaidDuration;
-//        s.prizeValue = _args.prizeValue;
-//
+
+        s.farmPeriod = _args.farmPeriod;
+        s.farmMaxTier = _args.farmMaxTier;
+        s.toddlerMaxCount = _args.toddlerMaxCount;
+        s.basicLootShare = _args.basicLootShare;
+        s.farmRaidDuration = _args.farmRaidDuration;
+        s.prizeValue = _args.prizeValue;
+
         s.poolShareFactor = _args.poolShareFactor;
-//
-//        s.vrfFee = _args.vrfFee;
-//        s.vrfKeyHash = _args.vrfKeyHash;
-//
+
+        s.vrfFee = _args.vrfFee;
+        s.vrfKeyHash = _args.vrfKeyHash;
+
         s.initEpochPool = INIT_WEEK_POOL;
     }
 }

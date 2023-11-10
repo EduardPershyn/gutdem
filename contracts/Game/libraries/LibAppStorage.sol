@@ -45,7 +45,7 @@ struct AppStorage {
     uint256 farmPeriod;
     uint256 farmMaxTier;
     uint256 toddlerMaxCount;
-//    uint256 basicLootShare;
+    uint256 basicLootShare;
     mapping(uint256 => uint256) farmTier;
     mapping(uint256 => uint256) farmHarvestedTime;
     mapping(uint256 => uint256) farmStockHarvest;
@@ -65,7 +65,7 @@ struct AppStorage {
 //    mapping(uint256 => uint256) scoutedFarm;
 //    mapping(uint256 => bool) isScoutDone;
 //    mapping(uint256 => bool) scoutInProgress;
-//    uint256 farmRaidDuration;
+    uint256 farmRaidDuration;
     mapping(uint256 => uint256) toddlerInRaidQty;
 //    mapping(uint256 => uint256) farmRaidStartTime;
 //    mapping(bytes32 => RaidRequest) raidRequests;
@@ -90,10 +90,10 @@ struct AppStorage {
 //    uint256[] players;
 //    mapping(uint256 => uint256) playerToLottery;
 //    bytes32 raffleRequestId;
-//    uint256 prizeValue;
-//
-//    bytes32 vrfKeyHash;
-//    uint256 vrfFee;
+    uint256 prizeValue;
+
+    bytes32 vrfKeyHash;
+    uint256 vrfFee;
     ////
 
     //VRF
