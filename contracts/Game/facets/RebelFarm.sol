@@ -12,9 +12,9 @@ contract RebelFarm is Modifiers {
     using BitMaps for BitMaps.BitMap;
 
     function activateFarm(
-        uint256 id_,
-        uint256[] calldata growerIds_,
-        uint256[] calldata toddlerIds_
+        uint24 id_,
+        uint24[] calldata growerIds_,
+        uint24[] calldata toddlerIds_
     ) external onlyDemRebelOwner(id_) {
         require(
             LibRebelFarm.isFarmActivated(id_) == false,
@@ -59,7 +59,7 @@ contract RebelFarm is Modifiers {
         return LibRebelFarm.farmUpgradeCooldown(id_);
     }
 
-    function increaseTier(uint256 id_) external onlyDemRebelOwner(id_) {
+    function increaseTier(uint24 id_) external onlyDemRebelOwner(id_) {
         require(
             LibRebelFarm.isFarmActivated(id_),
             "RebelFarm: Farm is not activated"
@@ -83,27 +83,27 @@ contract RebelFarm is Modifiers {
         s.farmUpgradeTime[id_] = block.timestamp;
     }
 
-    function addGrowers(uint256 id_, uint256[] calldata growerIds_) external {
+    function addGrowers(uint256 id_, uint24[] calldata growerIds_) external {
         LibRebelFarm.updateHarvestStock(id_);
         LibRebelFarm.addGrowers(id_, growerIds_);
     }
 
     function removeGrowers(
         uint256 id_,
-        uint256[] calldata growerIds_
+        uint24[] calldata growerIds_
     ) external {
         LibRebelFarm.updateHarvestStock(id_);
         LibRebelFarm.releaseGrowers(id_, growerIds_);
     }
 
-    function addToddlers(uint256 id_, uint256[] calldata toddlerIds_) external {
+    function addToddlers(uint256 id_, uint24[] calldata toddlerIds_) external {
         LibRebelFarm.updateHarvestStock(id_);
         LibRebelFarm.addToddlers(id_, toddlerIds_);
     }
 
     function removeToddlers(
         uint256 id_,
-        uint256[] calldata toddlerIds_
+        uint24[] calldata toddlerIds_
     ) external {
         require(
             LibFarmRaid.isRaidOngoing(id_) == false,

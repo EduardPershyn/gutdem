@@ -52,7 +52,7 @@ struct AppStorage {
     mapping(uint256 => uint256) farmUpgradeTime;
 
     // Tier Indexes (only for started farms)
-    mapping(uint256 => uint256[]) tierFarmIds;
+    mapping(uint256 => uint24[]) tierFarmIds;
     mapping(uint256 => mapping(uint256 => uint256)) tierFarmIdIndexes;
 
     //Nfts for Farm

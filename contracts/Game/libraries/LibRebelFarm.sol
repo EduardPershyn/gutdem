@@ -16,7 +16,7 @@ library LibRebelFarm {
         return s.farmTier[id_] != 0;
     }
 
-    function addGrowers(uint256 id_, uint256[] calldata growerIds_) internal {
+    function addGrowers(uint256 id_, uint24[] calldata growerIds_) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
         uint256 idsCount = growerIds_.length;
@@ -45,7 +45,7 @@ library LibRebelFarm {
 
     function releaseGrowers(
         uint256 id_,
-        uint256[] calldata growerIds_
+        uint24[] calldata growerIds_
     ) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
@@ -72,7 +72,7 @@ library LibRebelFarm {
         s.farmGrowersCount[id_] -= idsCount;
     }
 
-    function addToddlers(uint256 id_, uint256[] calldata toddlerIds_) internal {
+    function addToddlers(uint256 id_, uint24[] calldata toddlerIds_) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
         uint256 idsCount = toddlerIds_.length;
@@ -100,7 +100,7 @@ library LibRebelFarm {
 
     function releaseToddlers(
         uint256 id_,
-        uint256[] calldata toddlerIds_
+        uint24[] calldata toddlerIds_
     ) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
@@ -203,13 +203,13 @@ library LibRebelFarm {
         return cdTime - (block.timestamp - s.farmUpgradeTime[id_]);
     }
 
-    function removeFromTierIndex(uint256 rebelId, uint256 tier) internal {
+    function removeFromTierIndex(uint24 rebelId, uint256 tier) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
         uint256 index = s.tierFarmIdIndexes[tier][rebelId];
         uint256 lastIndex = s.tierFarmIds[tier].length - 1;
         if (index != lastIndex) {
-            uint256 lastTokenId = s.tierFarmIds[tier][lastIndex];
+            uint24 lastTokenId = s.tierFarmIds[tier][lastIndex];
             s.tierFarmIds[tier][index] = lastTokenId;
             s.tierFarmIdIndexes[tier][lastTokenId] = index;
         }
@@ -217,7 +217,7 @@ library LibRebelFarm {
         delete s.tierFarmIdIndexes[tier][rebelId];
     }
 
-    function addToTierIndex(uint256 rebelId, uint256 tier) internal {
+    function addToTierIndex(uint24 rebelId, uint256 tier) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
         s.tierFarmIdIndexes[tier][rebelId] = s.tierFarmIds[tier].length;
