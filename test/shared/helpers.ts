@@ -63,17 +63,27 @@ const helpers = {
     account: Signer,
     farmId: number,
     tierLevel: number,
-    safeFacet: Contract,
+    safeContract: Contract,
     rebelFarm: Contract,
+    gameAddress: string,
   ) => {
     const tierDbnPrice = await rebelFarm.tierUpgradeCost(tierLevel);
+    const ownerAddress = await ownerAccount.getAddress();
 
-    //       { //Update safe entry
-    //           let tx = await safeFacet.connect(ownerAccount)
-    //               .increaseSafeEntryTest(farmId, tierDbnPrice);
-    //           let receipt = await tx.wait();
-    //           expect(receipt.status).to.be.equal(1);
-    //       }
+    {
+      //Update safe entry
+      await (
+        await safeContract.connect(ownerAccount).setGameContract(ownerAddress)
+      ).wait();
+      let tx = await safeContract
+        .connect(ownerAccount)
+        .increaseSafeEntry(farmId, tierDbnPrice);
+      let receipt = await tx.wait();
+      expect(receipt.status).to.be.equal(1);
+      await (
+        await safeContract.connect(ownerAccount).setGameContract(gameAddress)
+      ).wait();
+    }
     {
       //Increase tier
       const tx = await rebelFarm.connect(account).increaseTier(farmId);

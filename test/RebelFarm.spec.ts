@@ -10,9 +10,10 @@ import * as utils from "../scripts/deploy";
 describe("RebelFarm test", async () => {
   let demBacon: Contract;
   let rebelFarm: Contract;
+  let cashOut: Contract;
   let growerNft: Contract;
   let toddlerNft: Contract;
-  let safeFacet: Contract;
+  let safeContract: Contract;
 
   let accounts: Signer[];
   let owner: Signer;
@@ -22,6 +23,7 @@ describe("RebelFarm test", async () => {
   let gameAddress: string;
   let growerAddress: string;
   let toddlerAddress: string;
+  let safeAddress: string;
 
   let rootDemRebelAddress: string;
 
@@ -32,6 +34,7 @@ describe("RebelFarm test", async () => {
     gameAddress = deployOutput.game;
     growerAddress = deployOutput.growerDemNft;
     toddlerAddress = deployOutput.toddlerDemNft;
+    safeAddress = deployOutput.safe;
 
     rootDemRebelAddress = await helpers.deployL1(demRebelAddress);
 
@@ -48,6 +51,7 @@ describe("RebelFarm test", async () => {
       gameAddress,
       accounts[0],
     );
+    cashOut = await ethers.getContractAt("CashOut", gameAddress, accounts[0]);
     growerNft = await ethers.getContractAt(
       "DemNft",
       growerAddress,
@@ -58,6 +62,7 @@ describe("RebelFarm test", async () => {
       toddlerAddress,
       accounts[0],
     );
+    safeContract = await ethers.getContractAt("Safe", safeAddress, accounts[0]);
   });
 
   it("Farm params calc test", async () => {
@@ -145,7 +150,9 @@ describe("RebelFarm test", async () => {
       expect(value).to.be.equal(false);
     }
     {
-      const tx = await rebelFarm.connect(user).activateFarm(tokenId, [0, 1], [0]);
+      const tx = await rebelFarm
+        .connect(user)
+        .activateFarm(tokenId, [0, 1], [0]);
       const receipt = await tx.wait();
       expect(receipt.status).to.be.equal(1, "Should Activate Farm");
     }
@@ -224,8 +231,9 @@ describe("RebelFarm test", async () => {
       user,
       tokenId,
       2,
-      safeFacet,
+      safeContract,
       rebelFarm,
+      gameAddress,
     );
     {
       //Check CD Fail Increase tier
@@ -302,8 +310,9 @@ describe("RebelFarm test", async () => {
       user,
       tokenId,
       2,
-      safeFacet,
+      safeContract,
       rebelFarm,
+      gameAddress,
     );
     {
       //Add growers/toddlers to farm
@@ -342,13 +351,15 @@ describe("RebelFarm test", async () => {
       const receipt = await tx.wait();
       expect(receipt.status).to.be.equal(1);
     }
-    //           {
-    //               let safeContent = await safeFacet.connect(user).getSafeContent(tokenId);
-    //               //console.log(safeContent);
-    //               let amountStr = ethers.utils.formatEther(safeContent);
-    //               let amount = parseInt(amountStr, 10);
-    //               expect(amount).to.be.equal(84);
-    //           }
+    {
+      let safeContent = await safeContract
+        .connect(user)
+        .getSafeContent(tokenId);
+      //console.log(safeContent);
+      let amountStr = ethers.formatEther(safeContent);
+      let amount = parseInt(amountStr, 10);
+      expect(amount).to.be.equal(84);
+    }
     {
       const amountWei = await rebelFarm.connect(user).harvestAmount(tokenId);
       const amountStr = ethers.formatEther(amountWei);
@@ -357,120 +368,123 @@ describe("RebelFarm test", async () => {
     }
   });
 
-  //       it('Farm swap to Dbn test', async () => {
-  //           let user = accounts[0];
-  //           let userAddress = await user.getAddress();
-  //           let farmId = 3;
-  //
-  //           let tokensMass = new BigNumber.from(0);
-  //           for (let tokenId = 1; tokenId <= 3; tokenId++) {
-  //               let amountWei = await rebelFarm.connect(user).harvestAmount(tokenId);
-  //               let safeContent = await safeFacet.connect(user).getSafeContent(tokenId);
-  //
-  //               tokensMass = tokensMass.add(amountWei);
-  //               tokensMass = tokensMass.add(safeContent);
-  //               console.log(amountWei);
-  //               console.log(safeContent);
-  //           }
-  //           console.log(tokensMass);
-  //
-  //           //Test init values
-  //           await rebelFarm.startNewCashOutEpoch(tokensMass, ethers.utils.parseEther("5"));
-  //           {
-  //               let value;
-  //               value = await rebelFarm.getInitEpochPool();
-  //               console.log(value);
-  //               expect(value).to.be.equal(ethers.utils.parseEther("995000"));
-  //           }
-  //           {
-  //               let value;
-  //               value = await rebelFarm.getPoolShareFactor();
-  //               expect(value).to.be.equal(ethers.utils.parseEther("1.5"));
-  //           }
-  //
-  //           //Test Swap Pair
-  //           {
-  //               let value = await rebelFarm.getTokenDbnSwapPair(farmId);
-  //               expect(value.dbnAmount).to.be.equal(ethers.utils.parseEther("16.8"));
-  //               expect(value.tokenToSpend).to.be.equal(ethers.utils.parseEther("84"));
-  //           }
-  //
-  //
-  //           //Cash out
-  //           //Test Before
-  //           let tokensAmount = ethers.utils.parseEther("84");
-  //           let dbnAmount = ethers.utils.parseEther("16.8");
-  //           {
-  //               let safeContent = await safeFacet.connect(user).getSafeContent(farmId);
-  //               expect(safeContent).to.be.equal(tokensAmount);
-  //           }
-  //           {
-  //               let dbnBalance = await dbnFacet.balanceOf(userAddress);
-  //               expect(dbnBalance).to.be.equal(0);
-  //           }
-  //           //Test cash out
-  //           { //Mint demBacon
-  //               let ownerAccount = accounts[0];
-  //               let tx = await dbnFacet.connect(ownerAccount)
-  //                   .mint(safeFacet.address, dbnAmount);
-  //               let receipt = await tx.wait();
-  //               expect(receipt.status).to.be.equal(1, "Should mint demBacon");
-  //           }
-  //           {
-  //               let farmOwner = accounts[3];
-  //               await rebelFarm.connect(farmOwner).cashOut(farmId);
-  //           }
-  //           //Test After
-  //           {
-  //               let safeContent = await safeFacet.connect(user).getSafeContent(farmId);
-  //               expect(safeContent).to.be.equal(0);
-  //           }
-  //           {
-  //               let farmOwnerAddress = accounts[3].getAddress();
-  //               let dbnBalance = await dbnFacet.balanceOf(farmOwnerAddress);
-  //               expect(dbnBalance).to.be.equal(dbnAmount);
-  //           }
-  //       })
-  //
-  //     it('Dbn to Farm tokens swap test', async () => {
-  //         let tokensAmount = ethers.utils.parseEther("84");
-  //         let dbnAmount = ethers.utils.parseEther("16.8");
-  //         let user = accounts[3];
-  //         let userAddress = await user.getAddress();
-  //         let farmId = 3;
-  //
-  //         {
-  //             let value = await rebelFarm.getFarmTokensAmountFromDbn(dbnAmount);
-  //             expect(value).to.be.equal(tokensAmount);
-  //         }
-  //
-  //         //Test Before
-  //         {
-  //             let safeContent = await safeFacet.connect(user).getSafeContent(farmId);
-  //             expect(safeContent).to.be.equal(0);
-  //         }
-  //         {
-  //             let dbnBalance = await dbnFacet.balanceOf(userAddress);
-  //             expect(dbnBalance).to.be.equal(dbnAmount);
-  //         }
-  //         //Test Buy
-  //         { //Approve demBacon
-  //             let tx = await dbnFacet.connect(user)
-  //                 .approve(rebelFarm.address, dbnAmount);
-  //             let receipt = await tx.wait();
-  //             expect(receipt.status).to.be.equal(1, "Should approve demBacon");
-  //         }
-  //         {
-  //             await rebelFarm.connect(user).buyFarmTokens(farmId, dbnAmount);
-  //         }
-  //         //Test After
-  //         {
-  //             let safeContent = await safeFacet.connect(user).getSafeContent(farmId);
-  //             expect(safeContent).to.be.equal(tokensAmount);
-  //         }
-  //         {
-  //             let dbnBalance = await dbnFacet.balanceOf(userAddress);
-  //             expect(dbnBalance).to.be.equal(0);
-  //         }
-  // })
+  it("Farm swap to Dbn test", async () => {
+    let user = accounts[0];
+    let userAddress = await user.getAddress();
+    let farmId = 3;
+
+    let tokensMass = 0n;
+    for (let tokenId = 1; tokenId <= 3; tokenId++) {
+      let amountWei = await rebelFarm.connect(user).harvestAmount(tokenId);
+      let safeContent = await safeContract
+        .connect(user)
+        .getSafeContent(tokenId);
+
+      tokensMass = tokensMass + amountWei;
+      tokensMass = tokensMass + safeContent;
+      console.log(amountWei);
+      console.log(safeContent);
+    }
+    console.log(tokensMass);
+
+    //Test init values
+    await cashOut.startNewCashOutEpoch(tokensMass, ethers.parseEther("5"));
+    {
+      let value;
+      value = await cashOut.getInitEpochPool();
+      console.log(value);
+      expect(value).to.be.equal(ethers.parseEther("995000"));
+    }
+    {
+      let value;
+      value = await cashOut.getPoolShareFactor();
+      expect(value).to.be.equal(ethers.parseEther("1.5"));
+    }
+
+    //Test Swap Pair
+    {
+      let value = await cashOut.getTokenDbnSwapPair(farmId);
+      expect(value.dbnAmount).to.be.equal(ethers.parseEther("16.8"));
+      expect(value.tokenToSpend).to.be.equal(ethers.parseEther("84"));
+    }
+
+    //Cash out
+    //Test Before
+    let tokensAmount = ethers.parseEther("84");
+    let dbnAmount = ethers.parseEther("16.8");
+    {
+      let safeContent = await safeContract.connect(user).getSafeContent(farmId);
+      expect(safeContent).to.be.equal(tokensAmount);
+    }
+    {
+      let dbnBalance = await demBacon.balanceOf(userAddress);
+      expect(dbnBalance).to.be.equal(0);
+    }
+    //Test cash out
+    {
+      //Mint demBacon
+      let ownerAccount = accounts[0];
+      let tx = await demBacon
+        .connect(ownerAccount)
+        .mint(safeAddress, dbnAmount);
+      let receipt = await tx.wait();
+      expect(receipt.status).to.be.equal(1, "Should mint demBacon");
+    }
+    {
+      let farmOwner = accounts[3];
+      await cashOut.connect(farmOwner).cashOut(farmId);
+    }
+    //Test After
+    {
+      let safeContent = await safeContract.connect(user).getSafeContent(farmId);
+      expect(safeContent).to.be.equal(0);
+    }
+    {
+      let farmOwnerAddress = accounts[3].getAddress();
+      let dbnBalance = await demBacon.balanceOf(farmOwnerAddress);
+      expect(dbnBalance).to.be.equal(dbnAmount);
+    }
+  });
+
+  it("Dbn to Farm tokens swap test", async () => {
+    let tokensAmount = ethers.parseEther("84");
+    let dbnAmount = ethers.parseEther("16.8");
+    let user = accounts[3];
+    let userAddress = await user.getAddress();
+    let farmId = 3;
+
+    {
+      let value = await cashOut.getFarmTokensAmountFromDbn(dbnAmount);
+      expect(value).to.be.equal(tokensAmount);
+    }
+
+    //Test Before
+    {
+      let safeContent = await safeContract.connect(user).getSafeContent(farmId);
+      expect(safeContent).to.be.equal(0);
+    }
+    {
+      let dbnBalance = await demBacon.balanceOf(userAddress);
+      expect(dbnBalance).to.be.equal(dbnAmount);
+    }
+    //Test Buy
+    {
+      //Approve demBacon
+      let tx = await demBacon.connect(user).approve(cashOut.target, dbnAmount);
+      let receipt = await tx.wait();
+      expect(receipt.status).to.be.equal(1, "Should approve demBacon");
+    }
+    {
+      await cashOut.connect(user).buyFarmTokens(farmId, dbnAmount);
+    }
+    //Test After
+    {
+      let safeContent = await safeContract.connect(user).getSafeContent(farmId);
+      expect(safeContent).to.be.equal(tokensAmount);
+    }
+    {
+      let dbnBalance = await demBacon.balanceOf(userAddress);
+      expect(dbnBalance).to.be.equal(0);
+    }
+  });
 });

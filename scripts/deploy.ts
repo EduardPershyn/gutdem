@@ -19,6 +19,7 @@ export async function main(
   }
 
   const dbnAddress = await demBaconDeploy();
+  const safeAddress = await deploySafe();
   let growerAddress, toddlerAddress, demRebelAddress, gameAddress;
   if (isRoot) {
     [demRebelAddress] = await deployModeRoot();
@@ -35,7 +36,7 @@ export async function main(
     game: gameAddress,
     growerDemNft: growerAddress,
     toddlerDemNft: toddlerAddress,
-    safe: "",
+    safe: safeAddress,
     link: "",
   });
   return result;
@@ -140,7 +141,7 @@ export async function main(
         demRebelAddress,
         growerAddress,
         toddlerAddress,
-        toddlerAddress, //FIX
+        safeAddress,
       ),
     );
 
@@ -187,6 +188,18 @@ export async function main(
       LOG(`>> gameFacet addGameManagers gas used: ${strDisplay(tx.gasUsed)}`);
       totalGasUsed += tx.gasUsed;
     }
+    {
+      const safeContract = await ethers.getContractAt(
+        "Safe",
+        safeAddress,
+        accounts[0],
+      );
+      const tx = await (
+        await safeContract.connect(accounts[0]).setGameContract(gameAddress)
+      ).wait();
+      LOG(`>> Safe setGameContract gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
+    }
 
     return [growerAddress, toddlerAddress, demRebelAddress, gameAddress];
   }
@@ -205,6 +218,20 @@ export async function main(
     const tx = await (await deployedDbn.setRewardManager(account)).wait();
     LOG(`>> demBacon setRewardManager gas used: ${strDisplay(tx.gasUsed)}`);
     totalGasUsed += tx.gasUsed;
+
+    return receipt.contractAddress;
+  }
+
+  async function deploySafe(): Promise<string> {
+    const deployedSafe = await (
+      await ethers.getContractFactory("Safe")
+    ).deploy(dbnAddress);
+    await deployedSafe.waitForDeployment();
+    const receipt = await deployedSafe.deploymentTransaction().wait();
+
+    LOG(`>> Safe address: ${receipt.contractAddress}`);
+    LOG(`>> Safe deploy gas used: ${strDisplay(receipt.gasUsed)}`);
+    totalGasUsed += receipt.gasUsed;
 
     return receipt.contractAddress;
   }
