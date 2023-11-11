@@ -156,13 +156,13 @@ library LibRebelFarm {
     function transferToSafe(uint256 id_, uint256 amount) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
-        ISafe(s.safeAddress).increaseSafeEntry(id_, amount);
+        //ISafe(s.safeAddress).increaseSafeEntry(id_, amount); // TODO
     }
 
     function payFromSafe(uint256 id_, uint256 amount) internal {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
-        ISafe(s.safeAddress).reduceSafeEntry(id_, amount);
+        //ISafe(s.safeAddress).reduceSafeEntry(id_, amount); // TODO
     }
 
     function updateHarvestTimestamp(uint256 id_) internal {

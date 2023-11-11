@@ -3,13 +3,15 @@ import { assert, expect } from "chai";
 import { Contract, Signer } from "ethers";
 import { deployConfig as testCfg } from "../../deploy-test.config";
 
-let helpers = {
+import * as utils from "../../scripts/deploy";
+
+const helpers = {
   purchaseRebels: async (
     saleFacet: Contract,
     account: Signer,
     count: number,
   ) => {
-    let tx = await saleFacet.connect(account).purchaseDemRebels(count, {
+    const tx = await saleFacet.connect(account).purchaseDemRebels(count, {
       value: testCfg.demRebelSalePrice * BigInt(count),
     });
     const receipt = await tx.wait();
@@ -20,12 +22,12 @@ let helpers = {
     owner: Signer,
     account: Signer,
     dbnFacet: Contract,
-    amount: BigInt,
+    amount: bigint,
   ) => {
-    let accountAddress = await account.getAddress();
+    const accountAddress = await account.getAddress();
     {
-      let tx = await dbnFacet.connect(owner).mint(accountAddress, amount);
-      let receipt = await tx.wait();
+      const tx = await dbnFacet.connect(owner).mint(accountAddress, amount);
+      const receipt = await tx.wait();
       expect(receipt.status).to.be.equal(1, "Should mint demBacon");
     }
   },
@@ -33,28 +35,207 @@ let helpers = {
   buyGrowers: async (
     owner: Signer,
     account: Signer,
-    grwsCount: BigInt,
-    dbnFacet: Contract,
+    grwsCount: bigint,
+    demBacon: Contract,
     growerNftFacet: Contract,
   ) => {
-    let accountAddress = await account.getAddress();
-    let totalPrice = testCfg.growerSaleBcnPrice * BigInt(grwsCount);
+    const accountAddress = await account.getAddress();
+    const totalPrice = testCfg.growerSaleBcnPrice * BigInt(grwsCount);
 
-    await helpers.mintDemBacon(owner, account, dbnFacet, totalPrice);
-    let balanceBefore = await growerNftFacet.balanceOf(accountAddress);
+    await helpers.mintDemBacon(owner, account, demBacon, totalPrice);
+    const balanceBefore = await growerNftFacet.balanceOf(accountAddress);
     {
       //Use ERC1363 to obtain growers
-      let tx = await dbnFacet
+      const tx = await demBacon
         .connect(account)
         .transferAndCall(growerNftFacet.target, totalPrice);
-      let receipt = await tx.wait();
-      expect(receipt.status).to.be.equal(1, "Should approve demBacon");
+      await tx.wait();
     }
-    let balanceAfter = await growerNftFacet.balanceOf(accountAddress);
+    const balanceAfter = await growerNftFacet.balanceOf(accountAddress);
     expect(balanceAfter - balanceBefore).to.be.equal(
       grwsCount,
       "Buy obtain failed",
     );
+  },
+
+  increaseFarmTier: async (
+    ownerAccount: Signer,
+    account: Signer,
+    farmId: number,
+    tierLevel: number,
+    safeFacet: Contract,
+    rebelFarm: Contract,
+  ) => {
+    const tierDbnPrice = await rebelFarm.tierUpgradeCost(tierLevel);
+
+    //       { //Update safe entry
+    //           let tx = await safeFacet.connect(ownerAccount)
+    //               .increaseSafeEntryTest(farmId, tierDbnPrice);
+    //           let receipt = await tx.wait();
+    //           expect(receipt.status).to.be.equal(1);
+    //       }
+    {
+      //Increase tier
+      const tx = await rebelFarm.connect(account).increaseTier(farmId);
+      const receipt = await tx.wait();
+      expect(receipt.status).to.be.equal(1, "Should increase tier");
+    }
+  },
+
+  buyToddlers: async (
+    owner: Signer,
+    account: Signer,
+    todCount: bigint,
+    demBacon: Contract,
+    toddlerNftFacet: Contract,
+  ) => {
+    const accountAddress = await account.getAddress();
+    const totalPrice = testCfg.toddlerSaleBcnPrice * BigInt(todCount);
+
+    await helpers.mintDemBacon(owner, account, demBacon, totalPrice);
+    const balanceBefore = await toddlerNftFacet.balanceOf(accountAddress);
+    {
+      //Use ERC1363 to obtain growers
+      const tx = await demBacon
+        .connect(account)
+        .transferAndCall(toddlerNftFacet.target, totalPrice);
+      await tx.wait();
+    }
+    const balanceAfter = await toddlerNftFacet.balanceOf(accountAddress);
+    expect(balanceAfter - balanceBefore).to.be.equal(
+      todCount,
+      "Buy obtain failed",
+    );
+  },
+
+  deployL1: async (demRebelAddressChild: Contract) => {
+    const accounts = await ethers.getSigners();
+    const deployRootOutput = await utils.main(true, true);
+    const demRebelAddressRoot = deployRootOutput.demRebel;
+
+    const rootTunnel = await ethers.getContractAt(
+      "RootTunnel",
+      demRebelAddressRoot,
+      accounts[0],
+    );
+    const bridgeRoot = await ethers.getContractAt(
+      "ChainBridge",
+      demRebelAddressRoot,
+      accounts[0],
+    );
+
+    const childTunnel = await ethers.getContractAt(
+      "ChildTunnel",
+      demRebelAddressChild,
+      accounts[0],
+    );
+    const bridgeChild = await ethers.getContractAt(
+      "ChainBridge",
+      demRebelAddressChild,
+      accounts[0],
+    );
+
+    {
+      const tx = await rootTunnel.setFxChildTunnel(childTunnel.target);
+      expect((await tx.wait()).status).to.equal(1);
+    }
+    {
+      const tx = await childTunnel.setFxRootTunnel(rootTunnel.target);
+      expect((await tx.wait()).status).to.equal(1);
+    }
+    {
+      const tx = await bridgeRoot.setReflection(
+        demRebelAddressRoot,
+        demRebelAddressChild,
+      );
+      expect((await tx.wait()).status).to.equal(1);
+    }
+    {
+      const tx = await bridgeChild.setReflection(
+        demRebelAddressRoot,
+        demRebelAddressChild,
+      );
+      expect((await tx.wait()).status).to.equal(1);
+    }
+
+    let MockFxAddress;
+    {
+      const factory = await ethers.getContractFactory("MockFxRoot");
+      const facetInstance = await factory.deploy();
+      await facetInstance.waitForDeployment();
+      const receipt = await facetInstance.deploymentTransaction().wait();
+
+      expect(receipt.status).to.be.eq(1, "MockFxRoot deploy error");
+      MockFxAddress = receipt.contractAddress;
+    }
+    {
+      const tx = await rootTunnel.initializeRoot(
+        MockFxAddress,
+        testCfg.fxCheckpointManager,
+      );
+      const receipt = await tx.wait();
+      expect(receipt.status).to.be.eq(1, "rootTunnel init fail");
+    }
+    {
+      const tx = await childTunnel.initializeChild(MockFxAddress);
+      const receipt = await tx.wait();
+      expect(receipt.status).to.be.eq(1, "childTunnel init fail");
+    }
+
+    return demRebelAddressRoot;
+  },
+
+  bridgeL1toL2: async (
+    demRebelAddressRoot: Contract,
+    demRebelAddressChild: Contract,
+    account: Signer,
+    count: number,
+  ) => {
+    const accounts = await ethers.getSigners();
+    const manager = accounts[9];
+    const manAddress = await manager.getAddress();
+    const accountAddress = await account.getAddress();
+    const demRebelRoot = await ethers.getContractAt(
+      "DemRebel",
+      demRebelAddressRoot,
+      accounts[0],
+    );
+    const saleFacetRoot = await ethers.getContractAt(
+      "PreSaleFacet",
+      demRebelAddressRoot,
+      accounts[0],
+    );
+    const bridgeRoot = await ethers.getContractAt(
+      "ChainBridge",
+      demRebelAddressRoot,
+      accounts[0],
+    );
+    const demRebelChild = await ethers.getContractAt(
+      "DemRebel",
+      demRebelAddressChild,
+      accounts[0],
+    );
+
+    await helpers.purchaseRebels(saleFacetRoot, manager, count);
+    const tokenIds = await demRebelRoot
+      .connect(manager)
+      .tokenIdsOfOwner(manAddress);
+    {
+      const tx = await bridgeRoot
+        .connect(manager)
+        .transition(tokenIds.toArray());
+      expect((await tx.wait()).status).to.equal(1, "transition should be made");
+    }
+    {
+      await demRebelChild
+        .connect(manager)
+        .safeBatchTransferFrom(
+          manAddress,
+          accountAddress,
+          tokenIds.toArray(),
+          ethers.encodeBytes32String(""),
+        );
+    }
   },
 
   errorMessage: (e: any) => {
@@ -72,7 +253,7 @@ let helpers = {
       await tx;
       expect(true, "promise should fail").eq(false);
     } catch (e) {
-      let message = helpers.errorMessage(e);
+      const message = helpers.errorMessage(e);
       //console.log(message);
       expect(message).includes(errorMsg);
     }
