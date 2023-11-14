@@ -20,12 +20,11 @@ export async function main(
 
   const dbnAddress = await demBaconDeploy();
   const safeAddress = await deploySafe();
-  let growerAddress, toddlerAddress, demRebelAddress, gameAddress;
+  let growerAddress, toddlerAddress, demRebelAddress, gameAddress, linkAddress;
   if (isRoot) {
-    [demRebelAddress] = await deployModeRoot();
+    await deployModeRoot();
   } else {
-    [growerAddress, toddlerAddress, demRebelAddress, gameAddress] =
-      await deployModeChild();
+    await deployModeChild();
   }
 
   LOG(`> Total gas used: ${strDisplay(totalGasUsed)}`);
@@ -37,16 +36,16 @@ export async function main(
     growerDemNft: growerAddress,
     toddlerDemNft: toddlerAddress,
     safe: safeAddress,
-    link: "",
+    link: linkAddress,
   });
   return result;
 
-  async function deployModeRoot(): Promise<[string]> {
+  async function deployModeRoot() {
     const tunnel = tests ? "MockRootTunnel" : "RootTunnel";
     const [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs] =
       await deployFacets("DemRebel", "PreSaleFacet", "ChainBridge", tunnel);
 
-    const demRebelAddress = await deployDiamond(
+    demRebelAddress = await deployDiamond(
       "DemRebelDiamond",
       "contracts/DemRebel/InitDiamond.sol:InitDiamond",
       [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs],
@@ -64,11 +63,9 @@ export async function main(
       LOG(`>> initializeRoot gas used: ${strDisplay(tx.gasUsed)}`);
       totalGasUsed += tx.gasUsed;
     }
-
-    return [demRebelAddress];
   }
 
-  async function deployModeChild(): Promise<[string, string, string, string]> {
+  async function deployModeChild() {
     const tunnel = tests ? "MockChildTunnel" : "ChildTunnel";
     const [
       growerNftArgs,
@@ -81,6 +78,8 @@ export async function main(
       cashOutArgs,
       gameManagerArgs,
       rebelFarmArgs,
+      farmRaidArgs,
+      VRFConsumerArgs,
     ] = await deployFacets(
       "DemNft",
       "SaleFacet",
@@ -92,9 +91,11 @@ export async function main(
       "CashOut",
       "GameManager",
       "RebelFarm",
+      tests ? "FarmRaidTest" : "FarmRaid",
+      "VRFConsumer",
     );
 
-    const growerAddress = await deployDiamond(
+    growerAddress = await deployDiamond(
       "Grower DemNft",
       "contracts/DemNft/InitDiamond.sol:InitDiamond",
       [growerNftArgs, growerSaleArgs],
@@ -110,7 +111,7 @@ export async function main(
         ],
       ],
     );
-    const toddlerAddress = await deployDiamond(
+    toddlerAddress = await deployDiamond(
       "Toddler DemNft",
       "contracts/DemNft/InitDiamond.sol:InitDiamond",
       [toddlerNftArgs, toddlerSaleArgs],
@@ -126,16 +127,22 @@ export async function main(
         ],
       ],
     );
-    const demRebelAddress = await deployDiamond(
+    demRebelAddress = await deployDiamond(
       "DemRebelDiamond",
       "contracts/DemRebel/InitDiamond.sol:InitDiamond",
       [demRebelArgs, bridgeArgs, tunnelArgs],
       buildRebelArgs(),
     );
-    const gameAddress = await deployDiamond(
+    gameAddress = await deployDiamond(
       "GameDiamond",
       "contracts/Game/InitDiamond.sol:InitDiamond",
-      [cashOutArgs, gameManagerArgs, rebelFarmArgs],
+      [
+        cashOutArgs,
+        gameManagerArgs,
+        rebelFarmArgs,
+        farmRaidArgs,
+        VRFConsumerArgs,
+      ],
       buildGameArgs(
         dbnAddress,
         demRebelAddress,
@@ -200,8 +207,51 @@ export async function main(
       LOG(`>> Safe setGameContract gas used: ${strDisplay(tx.gasUsed)}`);
       totalGasUsed += tx.gasUsed;
     }
+    {
+      let vrfCoordinator;
+      let link;
+      if (tests) {
+        //Deploy VRF Mock stuff
+        const linkToken = await (
+          await ethers.getContractFactory("LinkTokenTest")
+        ).deploy();
+        await linkToken.waitForDeployment();
+        const linkTokenReceipt = await linkToken.deploymentTransaction().wait();
 
-    return [growerAddress, toddlerAddress, demRebelAddress, gameAddress];
+        const vrfCoordinatorMock = await (
+          await ethers.getContractFactory("VRFCoordinatorMock")
+        ).deploy(linkTokenReceipt.contractAddress);
+        await vrfCoordinatorMock.waitForDeployment();
+        const vrfCoordinatorMockReceipt = await vrfCoordinatorMock
+          .deploymentTransaction()
+          .wait();
+
+        vrfCoordinator = vrfCoordinatorMockReceipt.contractAddress;
+        link = linkTokenReceipt.contractAddress;
+      } else {
+        vrfCoordinator = cfg.vrfCoordinator;
+        link = cfg.linkTokenAddress;
+      }
+
+      const vrf = await ethers.getContractAt(
+        "VRFConsumer",
+        gameAddress,
+        accounts[0],
+      );
+      let tx = await (
+        await vrf.connect(accounts[0]).setVrfCoordinator(vrfCoordinator)
+      ).wait();
+      LOG(`>> setVrfCoordinator gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
+
+      tx = await (
+        await vrf.connect(accounts[0]).setLinkAddress(link)
+      ).wait();
+      LOG(`>> setLinkAddress gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
+
+      linkAddress = link;
+    }
   }
 
   async function demBaconDeploy(): Promise<string> {
@@ -359,7 +409,6 @@ export async function main(
         cfg.toddlerMaxCount,
         cfg.basicLootShare,
         cfg.farmRaidDuration,
-        cfg.prizeValue,
 
         cfg.poolShareFactor,
 

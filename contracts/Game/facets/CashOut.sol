@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+
 import {Modifiers} from "../libraries/LibAppStorage.sol";
 import {LibFarmCalc} from "../libraries/LibFarmCalc.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ISafe} from "../interfaces/ISafe.sol";
 
 contract CashOut is Modifiers {
+    using BitMaps for BitMaps.BitMap;
+
     function startNewCashOutEpoch(
         uint256 tokensMass_,
         uint256 exchangeRate_
@@ -28,7 +32,7 @@ contract CashOut is Modifiers {
      */
     function cashOut(uint256 id_) external onlyDemRebelOwner(id_) {
         require(
-            s.epochToFarmCashOut[s.epochNumber][id_] == false,
+            s.epochToFarmCashOut[s.epochNumber].get(id_) == false,
             "CashOut: Farm already cash out on this epoch!"
         );
         require(s.remainingEpochPool > 0, "CashOut: Token pool is empty!");
@@ -56,7 +60,7 @@ contract CashOut is Modifiers {
             s.remainingEpochPool -= dbnAmount;
 
             ISafe(s.safeAddress).reduceSafeEntry(id_, tokenToSpend);
-            s.epochToFarmCashOut[s.epochNumber][id_] = true;
+            s.epochToFarmCashOut[s.epochNumber].set(id_);
         }
     }
 
@@ -64,7 +68,7 @@ contract CashOut is Modifiers {
         uint256 id_
     ) external view returns (uint256 tokenToSpend, uint256 dbnAmount) {
         require(
-            s.epochToFarmCashOut[s.epochNumber][id_] == false,
+            s.epochToFarmCashOut[s.epochNumber].get(id_) == false,
             "CashOut: Farm already cash out on this epoch!"
         );
         require(
@@ -93,7 +97,7 @@ contract CashOut is Modifiers {
     }
 
     function isFarmCashOut(uint256 id_) external view returns (bool) {
-        return s.epochToFarmCashOut[s.epochNumber][id_];
+        return s.epochToFarmCashOut[s.epochNumber].get(id_);
     }
 
     function buyFarmTokens(

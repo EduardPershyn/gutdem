@@ -24,7 +24,7 @@ contract InitDiamond {
         uint256 toddlerMaxCount;
         uint256 basicLootShare;
         uint256 farmRaidDuration;
-        uint256 prizeValue;
+        //uint256 prizeValue;
 
         uint256 poolShareFactor;
 
@@ -50,7 +50,7 @@ contract InitDiamond {
         s.toddlerMaxCount = _args.toddlerMaxCount;
         s.basicLootShare = _args.basicLootShare;
         s.farmRaidDuration = _args.farmRaidDuration;
-        s.prizeValue = _args.prizeValue;
+        //s.prizeValue = _args.prizeValue;
 
         s.poolShareFactor = _args.poolShareFactor;
 

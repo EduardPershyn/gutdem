@@ -43,7 +43,7 @@ export let deployConfig = {
     poolShareFactor: ethers.parseEther("1.5"),
 
     //Lottery
-    prizeValue: ethers.parseEther("100"),
+    //prizeValue: ethers.parseEther("100"),
 
     vrfKeyHash: "0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4",
     vrfFee: ethers.parseEther("0.0001"),

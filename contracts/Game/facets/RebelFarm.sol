@@ -38,7 +38,7 @@ contract RebelFarm is Modifiers {
         return LibRebelFarm.harvestAmount(id_);
     }
 
-    function harvestFarm(uint256 id_) external onlyDemRebelOwner(id_) {
+    function harvestFarm(uint256 id_) external onlyDemRebelOwner(id_) onlyActiveFarm(id_) {
         LibRebelFarm.harvest(id_);
     }
 
@@ -59,11 +59,7 @@ contract RebelFarm is Modifiers {
         return LibRebelFarm.farmUpgradeCooldown(id_);
     }
 
-    function increaseTier(uint24 id_) external onlyDemRebelOwner(id_) {
-        require(
-            LibRebelFarm.isFarmActivated(id_),
-            "RebelFarm: Farm is not activated"
-        );
+    function increaseTier(uint24 id_) external onlyDemRebelOwner(id_) onlyActiveFarm(id_) {
         require(s.farmTier[id_] < s.farmMaxTier, "RebelFarm: Exceeds max tier");
         require(
             LibRebelFarm.farmUpgradeCooldown(id_) == 0,
@@ -83,7 +79,7 @@ contract RebelFarm is Modifiers {
         s.farmUpgradeTime[id_] = block.timestamp;
     }
 
-    function addGrowers(uint256 id_, uint24[] calldata growerIds_) external {
+    function addGrowers(uint256 id_, uint24[] calldata growerIds_) external onlyActiveFarm(id_) {
         LibRebelFarm.updateHarvestStock(id_);
         LibRebelFarm.addGrowers(id_, growerIds_);
     }
@@ -91,12 +87,12 @@ contract RebelFarm is Modifiers {
     function removeGrowers(
         uint256 id_,
         uint24[] calldata growerIds_
-    ) external {
+    ) external onlyActiveFarm(id_) {
         LibRebelFarm.updateHarvestStock(id_);
         LibRebelFarm.releaseGrowers(id_, growerIds_);
     }
 
-    function addToddlers(uint256 id_, uint24[] calldata toddlerIds_) external {
+    function addToddlers(uint256 id_, uint24[] calldata toddlerIds_) external onlyActiveFarm(id_) {
         LibRebelFarm.updateHarvestStock(id_);
         LibRebelFarm.addToddlers(id_, toddlerIds_);
     }
@@ -104,7 +100,7 @@ contract RebelFarm is Modifiers {
     function removeToddlers(
         uint256 id_,
         uint24[] calldata toddlerIds_
-    ) external {
+    ) external onlyActiveFarm(id_) {
         require(
             LibFarmRaid.isRaidOngoing(id_) == false,
             "RebelFarm: Farm raid is ongoing"

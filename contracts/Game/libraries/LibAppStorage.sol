@@ -5,12 +5,12 @@ import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
 import {LibDiamond} from "../../shared/diamond/lib/LibDiamond.sol";
 import {IERC721} from "@openzeppelin/contracts/interfaces/IERC721.sol";
+import {LibRebelFarm} from "../libraries/LibRebelFarm.sol";
 
-//import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 
 struct RebelFarmInfo {
     bool isFarmActivated;
-    bool isFarmStarted;
     uint256 farmTier;
     uint256 toddlerCount;
     uint256 growerCount;
@@ -28,8 +28,8 @@ struct RebelFarmInfo {
 }
 
 struct RaidRequest {
-    uint256 pivotFarm;
-    uint256 raidSuccessChance;
+    uint24 pivotFarm;
+    uint232 raidSuccessChance;
 }
 
 struct AppStorage {
@@ -62,14 +62,14 @@ struct AppStorage {
     mapping(uint256 => uint256) farmToddlersCount;
 
     //Raids
-//    mapping(uint256 => uint256) scoutedFarm;
-//    mapping(uint256 => bool) isScoutDone;
-//    mapping(uint256 => bool) scoutInProgress;
+    mapping(uint256 => uint256) scoutedFarm;
+    BitMaps.BitMap isScoutDone;
+    BitMaps.BitMap scoutInProgress;
     uint256 farmRaidDuration;
     mapping(uint256 => uint256) toddlerInRaidQty;
-//    mapping(uint256 => uint256) farmRaidStartTime;
-//    mapping(bytes32 => RaidRequest) raidRequests;
-//    mapping(bytes32 => uint256) scoutRequests;
+    mapping(uint256 => uint256) farmRaidStartTime;
+    mapping(bytes32 => RaidRequest) raidRequests;
+    mapping(bytes32 => uint256) scoutRequests;
     ////
 
     //FarmExchange
@@ -79,7 +79,7 @@ struct AppStorage {
     uint256 poolShareFactor; //param
     uint256 tokensMass;
     uint256 epochNumber;
-    mapping(uint256 => mapping(uint256 => bool)) epochToFarmCashOut;
+    mapping(uint256 => BitMaps.BitMap) epochToFarmCashOut;
     uint256 tokensExchangeRate;
     ////
 
@@ -90,18 +90,18 @@ struct AppStorage {
 //    uint256[] players;
 //    mapping(uint256 => uint256) playerToLottery;
 //    bytes32 raffleRequestId;
-    uint256 prizeValue;
+//    uint256 prizeValue;
 
     bytes32 vrfKeyHash;
     uint256 vrfFee;
     ////
 
     //VRF
-    //LinkTokenInterface LINK;
-//    address vrfCoordinator;
+    LinkTokenInterface LINK;
+    address vrfCoordinator;
 //    // Nonces for each VRF key from which randomness has been requested.
 //    // Must stay in sync with VRFCoordinator[_keyHash][this]
-//    mapping(bytes32 => uint256) nonces; /* keyHash */ /* nonce */
+    mapping(bytes32 => uint256) nonces; /* keyHash */ /* nonce */
 }
 
 library LibAppStorage {
@@ -115,8 +115,16 @@ library LibAppStorage {
 contract Modifiers {
     AppStorage internal s;
 
-    modifier onlyDemRebelOwner(uint256 tokenId_) {
-        require(msg.sender == IERC721(s.demRebelAddress).ownerOf(tokenId_),
+    modifier onlyActiveFarm(uint256 id_) {
+        require(
+            LibRebelFarm.isFarmActivated(id_),
+            "LibAppStorage: Farm is not activated"
+        );
+        _;
+    }
+
+    modifier onlyDemRebelOwner(uint256 id_) {
+        require(msg.sender == IERC721(s.demRebelAddress).ownerOf(id_),
             "LibAppStorage: Only DemRebel owner");
         _;
     }

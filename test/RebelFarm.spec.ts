@@ -7,7 +7,7 @@ import { deployConfig as testCfg } from "../deploy-test.config";
 
 import * as utils from "../scripts/deploy";
 
-describe("RebelFarm test", async () => {
+describe("RebelFarm and CashOut test", async () => {
   let demBacon: Contract;
   let rebelFarm: Contract;
   let cashOut: Contract;
