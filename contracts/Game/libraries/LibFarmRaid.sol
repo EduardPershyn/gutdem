@@ -39,28 +39,35 @@ library LibFarmRaid {
         AppStorage storage s = LibAppStorage.diamondStorage();
 
         //take random id from set of farms from tier that is more or equal
-        //mapping(uint256 => uint256) farmGrowersCount;
         uint256 rebelTier = s.farmTier[id_];
         uint256 idsCount = 0;
-        for (; rebelTier <= s.farmMaxTier; rebelTier++) {
-            idsCount += s.tierFarmIds[rebelTier].length;
+        for (uint256 t = rebelTier; t <= s.farmMaxTier; ++t) {
+            idsCount += s.tierFarmIds[t].length;
         }
-        uint256 randomElement = randomness_ % idsCount;
+        assert(idsCount > 1);
+        uint256 randomElement = randomness_ % (idsCount - 1); //don't count self
 
         //find the tier the random belongs to
         uint256 currentPos = 0;
-        uint256 currentTier = s.farmTier[id_];
+        uint256 currentTier = rebelTier;
+        uint256 tierIdsLength = s.tierFarmIds[currentTier].length - 1; //don't count self
         while (
-            s.tierFarmIds[currentTier].length == 0 ||
-            randomElement - currentPos >= s.tierFarmIds[currentTier].length
+            tierIdsLength == 0 || randomElement - currentPos >= tierIdsLength
         ) {
-            currentPos += s.tierFarmIds[currentTier].length;
+            currentPos += tierIdsLength;
             currentTier += 1;
+            tierIdsLength = s.tierFarmIds[currentTier].length;
         }
 
-        uint256 pickedId = randomElement - currentPos;
+        uint256 pickedIndex = randomElement - currentPos;
+        //should skip self index
+        if (currentTier == rebelTier) {
+            if (s.tierFarmIdIndexes[rebelTier][id_] <= pickedIndex) {
+                pickedIndex += 1;
+            }
+        }
 
-        return s.tierFarmIds[currentTier][pickedId];
+        return s.tierFarmIds[currentTier][pickedIndex];
     }
 
     function initRaid(

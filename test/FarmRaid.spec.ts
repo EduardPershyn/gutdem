@@ -29,29 +29,26 @@ describe("FarmRaidFacet test", async () => {
 
   let rootDemRebelAddress: string;
 
-  async function scoutTillSuccess(
+  async function makeScout(
     farmRaid: Contract,
     account: Signer,
     tokenId: number,
   ) {
-    let scoutResult = false;
-    while (scoutResult == false) {
-      console.log("===== Scout attempt...");
-      const tx = await farmRaid.connect(account).scoutTest(tokenId);
-      const receipt = await tx.wait();
-      let request;
-      for (const event of receipt.logs) {
-        if (event.eventName == "ScoutedTest") {
-          //console.log(`==== Event ${event.event} with args ${event.args}`);
-          request = event.args[0];
-        }
+    const receipt = await (
+      await farmRaid.connect(account).scoutTest(tokenId)
+    ).wait();
+    let request, random;
+    for (const event of receipt.logs) {
+      if (event.eventName == "ScoutedTest") {
+        //console.log(`==== Event ${event.eventName} with args \n ${event.args}`);
+        request = event.args[0];
+        random = event.args[1];
       }
-      await farmRaid.connect(account).scoutCallbackTest(request);
-      scoutResult = await farmRaid.connect(account).isScoutDone(tokenId);
     }
+    await farmRaid.connect(account).scoutCallbackTest(request, random);
     {
       const farmId = await farmRaid.connect(account).getScoutedFarm(tokenId);
-      console.log("======= Scouted farm: ", farmId);
+      console.log("===== Scouted farm: ", farmId);
     }
   }
 
@@ -99,7 +96,7 @@ describe("FarmRaidFacet test", async () => {
 
     //Check Scout, should scout different and success eventually
     for (let i = 0; i < 10; i++) {
-      await scoutTillSuccess(farmRaid, user, tokenId);
+      await makeScout(farmRaid, user, tokenId);
     }
   });
 
@@ -138,7 +135,7 @@ describe("FarmRaidFacet test", async () => {
         }
       }
 
-      await scoutTillSuccess(farmRaid, user, tokenId);
+      await makeScout(farmRaid, user, tokenId);
       //Balance before
       {
         const balanceWei = await demBacon.connect(user).balanceOf(userAddress);
@@ -172,17 +169,18 @@ describe("FarmRaidFacet test", async () => {
 
         let tx = await farmRaid.connect(user).raidTest(tokenId, 1);
         let receipt = await tx.wait();
-        let request;
+        let request, random;
         for (const event of receipt.logs) {
           if (event.eventName == "FarmRaidedTest") {
             console.log(
-              `==== Event ${event.eventName} with args ${event.args}`,
+              `==== Event ${event.eventName} with args \n ${event.args}`,
             );
             request = event.args[0];
+            random = event.args[1];
           }
         }
 
-        tx = await farmRaid.connect(user).raidCallbackTest(request);
+        tx = await farmRaid.connect(user).raidCallbackTest(request, random);
         receipt = await tx.wait();
         expect(receipt.status).to.be.equal(1);
         //console.log(receipt.logs);
@@ -195,7 +193,7 @@ describe("FarmRaidFacet test", async () => {
         for (const event of receipt.logs) {
           if (event.eventName == "FarmRaided") {
             console.log(
-              `==== Event ${event.eventName} with args ${event.args}`,
+              `==== Event ${event.eventName} with args \n ${event.args}`,
             );
             raidResult = event.args[2];
           }
@@ -279,21 +277,22 @@ describe("FarmRaidFacet test", async () => {
     }
 
     {
-      await scoutTillSuccess(farmRaid, user, tokenId);
+      await makeScout(farmRaid, user, tokenId);
       {
         let tx = await farmRaid.connect(user).raidTest(tokenId, 1);
         let receipt = await tx.wait();
-        let request;
+        let request, random;
         for (const event of receipt.logs) {
           if (event.eventName == "FarmRaidedTest") {
             console.log(
               `==== Event ${event.eventName} with args ${event.args}`,
             );
             request = event.args[0];
+            random = event.args[1];
           }
         }
 
-        tx = await farmRaid.connect(user).raidCallbackTest(request);
+        tx = await farmRaid.connect(user).raidCallbackTest(request, random);
         receipt = await tx.wait();
         expect(receipt.status).to.be.equal(1);
       }
@@ -374,7 +373,7 @@ describe("FarmRaidFacet test", async () => {
       //                 let random = await farmRaid.connect(user).testRandomNumber();
       //                 console.log("random: ", random[0], random[1], random[2]);
       //             }
-      await scoutTillSuccess(farmRaid, user, tokenId);
+      await makeScout(farmRaid, user, tokenId);
       //console.log("==== ", await farmRaid.connect(user).getRebelFarmInfo(tokenId));
     }
   });

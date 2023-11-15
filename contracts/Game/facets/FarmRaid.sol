@@ -18,7 +18,7 @@ contract FarmRaid is Modifiers {
         uint256 indexed farmId,
         bool isSuccess
     );
-    event ScoutPerformed(uint256 indexed rebelId, bool isSuccess);
+    event ScoutPerformed(uint256 indexed rebelId, uint256 indexed foundId);
 
     function scout(
         uint256 id_
@@ -37,14 +37,11 @@ contract FarmRaid is Modifiers {
 
         uint256 rebelId = s.scoutRequests[requestId_];
         uint256 foundId = LibFarmRaid.pickRandomFarm(rebelId, randomness_);
+        assert(foundId != rebelId);
 
-        bool scoutDone = (foundId != rebelId);
-        if (scoutDone) {
-            s.scoutedFarm[rebelId] = foundId;
-        }
-
-        s.isScoutDone.setTo(rebelId, scoutDone);
-        emit ScoutPerformed(rebelId, scoutDone);
+        s.scoutedFarm[rebelId] = foundId;
+        s.isScoutDone.set(rebelId);
+        emit ScoutPerformed(rebelId, foundId);
 
         s.scoutInProgress.unset(rebelId);
         delete s.scoutRequests[requestId_];

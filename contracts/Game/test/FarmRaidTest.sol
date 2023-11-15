@@ -12,12 +12,8 @@ import {VRFConsumer} from "../vrfConsumer/VRFConsumer.sol";
 contract FarmRaidTest is FarmRaid {
     using BitMaps for BitMaps.BitMap;
 
-    event ScoutedTest(
-        bytes32 requestId
-    );
-    event FarmRaidedTest(
-        bytes32 requestId
-    );
+    event ScoutedTest(bytes32 requestId, uint256 randomness);
+    event FarmRaidedTest(bytes32 requestId, uint256 randomness);
 
     function scoutTest(
         uint256 id_
@@ -27,22 +23,24 @@ contract FarmRaidTest is FarmRaid {
         bytes32 requestId = VRFConsumer(address(this)).requestRandomNumber();
         s.scoutRequests[requestId] = id_;
 
-        emit ScoutedTest(requestId);
+        uint256 randomness = uint256(
+            keccak256(abi.encodePacked(block.prevrandao, block.timestamp))
+        );
+
+        emit ScoutedTest(requestId, randomness);
     }
 
-    function scoutCallbackTest(bytes32 requestId_) external {
-        uint256 randomness = uint256(keccak256(abi.encodePacked(block.prevrandao, block.timestamp)));
-
+    function scoutCallbackTest(
+        bytes32 requestId_,
+        uint256 randomness_
+    ) external {
         uint256 rebelId = s.scoutRequests[requestId_];
-        uint256 foundId = LibFarmRaid.pickRandomFarm(rebelId, randomness);
+        uint256 foundId = LibFarmRaid.pickRandomFarm(rebelId, randomness_);
+        assert(foundId != rebelId);
 
-        bool scoutDone = (foundId != rebelId);
-        if (scoutDone) {
-            s.scoutedFarm[rebelId] = foundId;
-        }
-
-        s.isScoutDone.setTo(rebelId, scoutDone);
-        emit ScoutPerformed(rebelId, scoutDone);
+        s.scoutedFarm[rebelId] = foundId;
+        s.isScoutDone.set(rebelId);
+        emit ScoutPerformed(rebelId, foundId);
 
         s.scoutInProgress.unset(rebelId);
         delete s.scoutRequests[requestId_];
@@ -56,14 +54,19 @@ contract FarmRaidTest is FarmRaid {
         bytes32 requestId = VRFConsumer(address(this)).requestRandomNumber();
         s.raidRequests[requestId] = RaidRequest(id_, uint232(raidChance));
 
-        emit FarmRaidedTest(requestId);
+        uint256 randomness = uint256(
+            keccak256(abi.encodePacked(block.prevrandao, block.timestamp))
+        );
+
+        emit FarmRaidedTest(requestId, randomness);
     }
 
-    function raidCallbackTest(bytes32 requestId_) external {
-        uint256 randomness = uint256(keccak256(abi.encodePacked(block.prevrandao, block.timestamp)));
-
+    function raidCallbackTest(
+        bytes32 requestId_,
+        uint256 randomness_
+    ) external {
         RaidRequest storage request = s.raidRequests[requestId_];
-        bool result = randomness % 100 < request.raidSuccessChance;
+        bool result = randomness_ % 100 < request.raidSuccessChance;
         if (result) {
             LibFarmRaid.robSafe(request.pivotFarm);
         }
@@ -72,8 +75,6 @@ contract FarmRaidTest is FarmRaid {
             s.scoutedFarm[request.pivotFarm],
             result
         );
-
-        emit FarmRaided(request.pivotFarm, s.scoutedFarm[request.pivotFarm], result);
         delete s.raidRequests[requestId_];
     }
 }
