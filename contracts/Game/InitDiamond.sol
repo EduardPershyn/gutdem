@@ -52,11 +52,10 @@ contract InitDiamond {
         s.farmRaidDuration = _args.farmRaidDuration;
         //s.prizeValue = _args.prizeValue;
 
+        s.initEpochPool = INIT_WEEK_POOL;
         s.poolShareFactor = _args.poolShareFactor;
 
         s.vrfFee = _args.vrfFee;
         s.vrfKeyHash = _args.vrfKeyHash;
-
-        s.initEpochPool = INIT_WEEK_POOL;
     }
 }

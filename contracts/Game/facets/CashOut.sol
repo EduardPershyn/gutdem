@@ -31,25 +31,10 @@ contract CashOut is Modifiers {
      * Takes one of Min(remaining dbn in pool, farm pool share, farm harverst tokens)
      */
     function cashOut(uint256 id_) external onlyDemRebelOwner(id_) {
-        require(
-            s.epochToFarmCashOut[s.epochNumber].get(id_) == false,
-            "CashOut: Farm already cash out on this epoch!"
-        );
-        require(s.remainingEpochPool > 0, "CashOut: Token pool is empty!");
-
-        uint256 tokensInSafe = ISafe(s.safeAddress).getSafeContent(id_);
-        require(tokensInSafe > 0, "CashOut: Farm Safe is empty!");
-
         uint256 tokenToSpend;
         uint256 dbnAmount;
-        (tokenToSpend, dbnAmount) = LibFarmCalc.farmTokenToDbnSwapPair(
-            s.remainingEpochPool,
-            s.initEpochPool,
-            s.poolShareFactor,
-            tokensInSafe,
-            s.tokensMass,
-            s.tokensExchangeRate
-        );
+        (tokenToSpend, dbnAmount) = getTokenDbnSwapPair(id_);
+
         if (dbnAmount > 0) {
             //TODO mint dbn here?
             IERC20(s.demBaconAddress).transferFrom(
@@ -66,15 +51,12 @@ contract CashOut is Modifiers {
 
     function getTokenDbnSwapPair(
         uint256 id_
-    ) external view returns (uint256 tokenToSpend, uint256 dbnAmount) {
+    ) public view returns (uint256 tokenToSpend, uint256 dbnAmount) {
         require(
             s.epochToFarmCashOut[s.epochNumber].get(id_) == false,
             "CashOut: Farm already cash out on this epoch!"
         );
-        require(
-            s.remainingEpochPool > 0,
-            "CashOut: Token pool is empty!"
-        );
+        require(s.remainingEpochPool > 0, "CashOut: Token pool is empty!");
 
         uint256 tokensInSafe = ISafe(s.safeAddress).getSafeContent(id_);
         require(tokensInSafe > 0, "CashOut: Farm Safe is empty!");

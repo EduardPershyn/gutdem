@@ -54,15 +54,15 @@ contract DemRebel is Modifiers {
 
     /// @notice Change base URI of the NFT assets metadata
     /// @param _uri Base URI of the NFT assets metadata
-    function setBaseURI1(string memory _uri) external onlyRewardManager {
+    function setBaseURI1(string memory _uri) external onlyOwner {
         s.baseURI1 = _uri;
     }
 
-    function setBaseURI2(string memory _uri) external onlyRewardManager {
+    function setBaseURI2(string memory _uri) external onlyOwner {
         s.baseURI2 = _uri;
     }
 
-    function setBaseURI3(string memory _uri) external onlyRewardManager {
+    function setBaseURI3(string memory _uri) external onlyOwner {
         s.baseURI3 = _uri;
     }
 

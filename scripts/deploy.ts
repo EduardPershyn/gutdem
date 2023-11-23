@@ -51,6 +51,17 @@ export async function main(
       [demRebelArgs, preSaleFacetArgs, bridgeArgs, tunnelArgs],
       buildRebelArgs(),
     );
+
+    {
+      const demRebelSale = await ethers.getContractAt(
+        "PreSaleFacet",
+        demRebelAddress,
+        accounts[0],
+      );
+      const tx = await (await demRebelSale.setRewardManager(account)).wait();
+      LOG(`>> demRebel setRewardManager gas used: ${strDisplay(tx.gasUsed)}`);
+      totalGasUsed += tx.gasUsed;
+    }
     {
       const tunnelFacet = await ethers.getContractAt(
         tunnel,
